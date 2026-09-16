@@ -1,0 +1,319 @@
+"use client";
+
+import { useState } from "react";
+import { ListOrdered } from "lucide-react";
+import { Modal } from "@/components/ui/modal";
+import { inputClass, labelClass, primaryButtonClass, secondaryButtonClass, dangerButtonClass } from "@/components/ui/form";
+import { createTrade, updateTrade, deleteTrade, type TradeInput } from "@/app/actions";
+import { FUTURES_SYMBOLS, findFuturesSymbol } from "@/lib/futures-symbols";
+import { TIMEFRAMES, minutesForTimeframe, bucketToCandleClose } from "@/lib/timeframes";
+import { formatCurrency } from "@/lib/metrics";
+import { wallClockToUtcIso, zonedWallClock } from "@/lib/timezone";
+import type { Account, Trade } from "@/db/schema";
+
+export function TradeForm({
+  open,
+  onClose,
+  accounts,
+  trade,
+  timeZone,
+  defaultAccountId,
+  defaultDate,
+}: {
+  open: boolean;
+  onClose: () => void;
+  accounts: Account[];
+  trade?: Trade | null;
+  timeZone: string;
+  defaultAccountId?: string;
+  defaultDate?: string;
+}) {
+  const defaultTime = defaultDate
+    ? `${defaultDate}T09:30`
+    : zonedWallClock(new Date().toISOString(), timeZone);
+
+  const [accountId, setAccountId] = useState(trade?.accountId ?? defaultAccountId ?? accounts[0]?.id ?? "");
+  const [symbol, setSymbol] = useState(trade?.symbol ?? "");
+  const [side, setSide] = useState<TradeInput["side"]>(trade?.side ?? "LONG");
+  const [timeframe, setTimeframe] = useState(trade?.timeframe ?? "5m");
+  const [contracts, setContracts] = useState(String(trade?.contracts ?? 1));
+  const [entryTime, setEntryTime] = useState(
+    trade
+      ? zonedWallClock(trade.entryTime, timeZone)
+      : bucketToCandleClose(defaultTime, minutesForTimeframe("5m"))
+  );
+  const [points, setPoints] = useState(String(trade?.points ?? ""));
+  const [pointValue, setPointValue] = useState(
+    String(trade?.pointValue ?? findFuturesSymbol(trade?.symbol ?? "")?.pointValue ?? "")
+  );
+  const [fees, setFees] = useState(String(trade?.fees ?? 0));
+  const [tags, setTags] = useState(trade?.tags ?? "");
+  const [notes, setNotes] = useState(trade?.notes ?? "");
+  const [submitting, setSubmitting] = useState(false);
+
+  const selectedAccount = accounts.find((a) => a.id === accountId);
+
+  function recalcFees(nextContracts: string, nextAccountId: string) {
+    const account = accounts.find((a) => a.id === nextAccountId);
+    if (account?.feePerContract == null) return;
+    const c = Number(nextContracts) || 0;
+    setFees((account.feePerContract * c).toFixed(2));
+  }
+
+  function handleAccountChange(value: string) {
+    setAccountId(value);
+    recalcFees(contracts, value);
+  }
+
+  function handleContractsChange(value: string) {
+    setContracts(value);
+    recalcFees(value, accountId);
+  }
+
+  function handleSymbolChange(value: string) {
+    const upper = value.toUpperCase();
+    setSymbol(upper);
+    const known = findFuturesSymbol(upper);
+    if (known) setPointValue(String(known.pointValue));
+  }
+
+  function handleTimeframeChange(value: string) {
+    setTimeframe(value);
+    setEntryTime((prev) => bucketToCandleClose(prev, minutesForTimeframe(value)));
+  }
+
+  function handleEntryTimeChange(value: string) {
+    setEntryTime(bucketToCandleClose(value, minutesForTimeframe(timeframe)));
+  }
+
+  const grossPnl = (Number(points) || 0) * (Number(pointValue) || 0) * (Number(contracts) || 0);
+  const netPnl = grossPnl - (Number(fees) || 0);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
+    const input: TradeInput = {
+      accountId,
+      symbol,
+      side,
+      timeframe,
+      contracts: Number(contracts) || 1,
+      points: Number(points) || 0,
+      pointValue: Number(pointValue) || 0,
+      entryTime: wallClockToUtcIso(entryTime, timeZone),
+      fees: Number(fees) || 0,
+      pnl: grossPnl,
+      tags: tags || null,
+      notes: notes || null,
+    };
+    try {
+      if (trade) {
+        await updateTrade(trade.id, input);
+      } else {
+        await createTrade(input);
+      }
+      onClose();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!trade) return;
+    setSubmitting(true);
+    try {
+      await deleteTrade(trade.id);
+      onClose();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title={trade ? "Edit trade" : "Log a trade"} icon={ListOrdered} width="max-w-xl">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className={labelClass}>Account</label>
+          <select
+            className={inputClass}
+            value={accountId}
+            onChange={(e) => handleAccountChange(e.target.value)}
+            required
+          >
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+                {a.role === "MASTER" ? " (master — copies to followers)" : ""}
+              </option>
+            ))}
+          </select>
+          {selectedAccount?.role === "MASTER" && (
+            <p className="mt-1 text-xs text-[var(--accent)]">
+              This trade will auto-copy to this account&apos;s followers.
+            </p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className={labelClass}>Symbol</label>
+            <input
+              required
+              list="futures-symbols"
+              className={inputClass}
+              value={symbol}
+              onChange={(e) => handleSymbolChange(e.target.value)}
+              placeholder="ES"
+            />
+            <datalist id="futures-symbols">
+              {FUTURES_SYMBOLS.map((s) => (
+                <option key={s.symbol} value={s.symbol}>
+                  {s.name}
+                </option>
+              ))}
+            </datalist>
+          </div>
+          <div>
+            <label className={labelClass}>Side</label>
+            <select className={inputClass} value={side} onChange={(e) => setSide(e.target.value as TradeInput["side"])}>
+              <option value="LONG">Long</option>
+              <option value="SHORT">Short</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Contracts</label>
+            <input
+              required
+              type="number"
+              min="1"
+              className={inputClass}
+              value={contracts}
+              onChange={(e) => handleContractsChange(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelClass}>Timeframe</label>
+            <select className={inputClass} value={timeframe} onChange={(e) => handleTimeframeChange(e.target.value)}>
+              {TIMEFRAMES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Entry time</label>
+            <input
+              required
+              type="datetime-local"
+              className={inputClass}
+              value={entryTime}
+              onChange={(e) => handleEntryTimeChange(e.target.value)}
+            />
+            <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+              Snapped to this timeframe&apos;s candle close · {timeZone}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelClass}>Points +/-</label>
+            <input
+              required
+              type="number"
+              step="0.01"
+              className={inputClass}
+              value={points}
+              onChange={(e) => setPoints(e.target.value)}
+              placeholder="e.g. 12.5 or -6"
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Point value ($/pt)</label>
+            <input
+              required
+              type="number"
+              step="0.01"
+              className={inputClass}
+              value={pointValue}
+              onChange={(e) => setPointValue(e.target.value)}
+              placeholder="Auto-fills from symbol"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelClass}>Fees / commissions ($)</label>
+            <input
+              type="number"
+              step="0.01"
+              className={inputClass}
+              value={fees}
+              onChange={(e) => setFees(e.target.value)}
+            />
+            <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+              {selectedAccount?.feePerContract != null
+                ? `Auto: ${formatCurrency(selectedAccount.feePerContract)}/contract`
+                : "Set a fee per contract on the account to auto-fill this."}
+            </p>
+          </div>
+          <div>
+            <label className={labelClass}>Net P&amp;L</label>
+            <div
+              className={`flex h-9 items-center rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm font-semibold tabular ${
+                netPnl >= 0 ? "text-[var(--profit)]" : "text-[var(--loss)]"
+              }`}
+            >
+              {netPnl >= 0 ? "+" : ""}
+              {formatCurrency(netPnl)}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label className={labelClass}>Tags</label>
+          <input
+            className={inputClass}
+            value={tags ?? ""}
+            onChange={(e) => setTags(e.target.value)}
+            placeholder="breakout, A+ setup, revenge trade…"
+          />
+        </div>
+
+        <div>
+          <label className={labelClass}>Notes</label>
+          <textarea
+            className={inputClass}
+            rows={3}
+            value={notes ?? ""}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="What was the setup? How did you feel executing it?"
+          />
+        </div>
+
+        <div className="mt-2 flex items-center justify-between">
+          {trade ? (
+            <button type="button" onClick={handleDelete} disabled={submitting} className={dangerButtonClass}>
+              Delete trade
+            </button>
+          ) : (
+            <span />
+          )}
+          <div className="flex gap-2">
+            <button type="button" onClick={onClose} className={secondaryButtonClass}>
+              Cancel
+            </button>
+            <button type="submit" disabled={submitting} className={primaryButtonClass}>
+              {submitting ? "Saving…" : trade ? "Save changes" : "Log trade"}
+            </button>
+          </div>
+        </div>
+      </form>
+    </Modal>
+  );
+}

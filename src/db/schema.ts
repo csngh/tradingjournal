@@ -1,0 +1,95 @@
+import { sqliteTable, text, real, integer } from "drizzle-orm/sqlite-core";
+import { relations, sql } from "drizzle-orm";
+
+export const accounts = sqliteTable("accounts", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  broker: text("broker"),
+  color: text("color").notNull().default("#6366f1"),
+
+  role: text("role", { enum: ["MASTER", "FOLLOWER", "STANDALONE"] })
+    .notNull()
+    .default("STANDALONE"),
+  masterId: text("master_id"),
+  copyRatio: real("copy_ratio").notNull().default(1),
+
+  startingBalance: real("starting_balance").notNull(),
+  balanceAdjustment: real("balance_adjustment").notNull().default(0),
+  highestBalance: real("highest_balance"),
+  feePerContract: real("fee_per_contract"),
+  trailingDrawdown: real("trailing_drawdown"),
+  drawdownStopsAt: real("drawdown_stops_at"),
+  targetProfit: real("target_profit"),
+
+  status: text("status", { enum: ["ACTIVE", "PASSED", "BLOWN", "CLOSED"] })
+    .notNull()
+    .default("ACTIVE"),
+  sortOrder: integer("sort_order").notNull().default(0),
+
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
+export const trades = sqliteTable("trades", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id, { onDelete: "cascade" }),
+  copyGroupId: text("copy_group_id"),
+
+  symbol: text("symbol").notNull(),
+  side: text("side", { enum: ["LONG", "SHORT"] }).notNull(),
+  timeframe: text("timeframe").notNull(),
+  contracts: integer("contracts").notNull(),
+  points: real("points").notNull(),
+  pointValue: real("point_value").notNull(),
+  entryTime: text("entry_time").notNull(),
+  exitTime: text("exit_time").notNull(),
+  fees: real("fees").notNull().default(0),
+  pnl: real("pnl").notNull(),
+  tags: text("tags"),
+  notes: text("notes"),
+
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
+export const appSettings = sqliteTable("app_settings", {
+  id: integer("id").primaryKey(),
+  timezone: text("timezone").notNull().default("UTC"),
+
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
+export const accountsRelations = relations(accounts, ({ one, many }) => ({
+  master: one(accounts, {
+    fields: [accounts.masterId],
+    references: [accounts.id],
+    relationName: "copyGroup",
+  }),
+  followers: many(accounts, { relationName: "copyGroup" }),
+  trades: many(trades),
+}));
+
+export const tradesRelations = relations(trades, ({ one }) => ({
+  account: one(accounts, {
+    fields: [trades.accountId],
+    references: [accounts.id],
+  }),
+}));
+
+export type Account = typeof accounts.$inferSelect;
+export type NewAccount = typeof accounts.$inferInsert;
+export type Trade = typeof trades.$inferSelect;
+export type NewTrade = typeof trades.$inferInsert;
+export type AppSettings = typeof appSettings.$inferSelect;
