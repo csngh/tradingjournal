@@ -90,11 +90,17 @@ export function computeTrailingDrawdown(
     account.highestBalance ?? -Infinity,
     ...series.map((p) => p.balance)
   );
-  const lockAt = account.drawdownStopsAt ?? account.startingBalance;
 
   const rawThreshold = highWaterMark - account.trailingDrawdown;
-  const threshold = Math.min(rawThreshold, lockAt);
-  const isLocked = rawThreshold >= lockAt;
+
+  let threshold = rawThreshold;
+  let isLocked = false;
+  if (account.drawdownLockEnabled) {
+    const lockAt = account.drawdownStopsAt ?? account.startingBalance;
+    threshold = Math.min(rawThreshold, lockAt);
+    isLocked = rawThreshold >= lockAt;
+  }
+
   const distanceToBreach = currentBalance - threshold;
 
   return {

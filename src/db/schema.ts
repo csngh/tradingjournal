@@ -20,6 +20,7 @@ export const accounts = sqliteTable("accounts", {
   highestBalance: real("highest_balance"),
   feePerContract: real("fee_per_contract"),
   trailingDrawdown: real("trailing_drawdown"),
+  drawdownLockEnabled: integer("drawdown_lock_enabled", { mode: "boolean" }).notNull().default(true),
   drawdownStopsAt: real("drawdown_stops_at"),
   targetProfit: real("target_profit"),
 

@@ -46,6 +46,9 @@ export function AccountForm({
   const [trailingDrawdown, setTrailingDrawdown] = useState(
     account?.trailingDrawdown != null ? String(account.trailingDrawdown) : ""
   );
+  const [drawdownLockEnabled, setDrawdownLockEnabled] = useState(
+    account?.drawdownLockEnabled ?? true
+  );
   const [drawdownStopsAt, setDrawdownStopsAt] = useState(
     account?.drawdownStopsAt != null ? String(account.drawdownStopsAt) : ""
   );
@@ -74,6 +77,7 @@ export function AccountForm({
       highestBalance: highestBalance ? Number(highestBalance) : null,
       feePerContract: feePerContract ? Number(feePerContract) : null,
       trailingDrawdown: trailingDrawdown ? Number(trailingDrawdown) : null,
+      drawdownLockEnabled,
       drawdownStopsAt: drawdownStopsAt ? Number(drawdownStopsAt) : null,
       targetProfit: targetProfit ? Number(targetProfit) : null,
       status,
@@ -273,6 +277,20 @@ export function AccountForm({
               placeholder="Optional, e.g. 2000"
             />
           </div>
+          <div className="flex items-end pb-2">
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--text)]">
+              <input
+                type="checkbox"
+                className="h-4 w-4 cursor-pointer accent-[var(--accent)]"
+                checked={drawdownLockEnabled}
+                onChange={(e) => setDrawdownLockEnabled(e.target.checked)}
+              />
+              Lock drawdown floor
+            </label>
+          </div>
+        </div>
+
+        {drawdownLockEnabled && (
           <div>
             <label className={labelClass}>Drawdown locks at ($)</label>
             <input
@@ -283,8 +301,12 @@ export function AccountForm({
               onChange={(e) => setDrawdownStopsAt(e.target.value)}
               placeholder={`Defaults to starting balance`}
             />
+            <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+              Uncheck the lock floor above if this account&apos;s trailing drawdown has no lock and
+              keeps rising with every new high instead.
+            </p>
           </div>
-        </div>
+        )}
 
         <div>
           <label className={labelClass}>Profit target ($)</label>

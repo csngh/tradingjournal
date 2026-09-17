@@ -52,6 +52,7 @@ export type AccountInput = {
   highestBalance?: number | null;
   feePerContract?: number | null;
   trailingDrawdown?: number | null;
+  drawdownLockEnabled: boolean;
   drawdownStopsAt?: number | null;
   targetProfit?: number | null;
   status: "ACTIVE" | "PASSED" | "BLOWN" | "CLOSED";
@@ -76,6 +77,7 @@ export async function createAccount(input: AccountInput) {
     highestBalance: input.highestBalance ?? null,
     feePerContract: input.feePerContract ?? null,
     trailingDrawdown: input.trailingDrawdown ?? null,
+    drawdownLockEnabled: input.drawdownLockEnabled,
     drawdownStopsAt: input.drawdownStopsAt ?? null,
     targetProfit: input.targetProfit ?? null,
     status: input.status,
@@ -102,6 +104,7 @@ export async function updateAccount(id: string, input: AccountInput) {
       highestBalance: input.highestBalance ?? null,
       feePerContract: input.feePerContract ?? null,
       trailingDrawdown: input.trailingDrawdown ?? null,
+      drawdownLockEnabled: input.drawdownLockEnabled,
       drawdownStopsAt: input.drawdownStopsAt ?? null,
       targetProfit: input.targetProfit ?? null,
       status: input.status,
