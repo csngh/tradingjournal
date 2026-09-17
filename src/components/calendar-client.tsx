@@ -14,7 +14,7 @@ import {
   startOfWeek,
 } from "date-fns";
 import { ChevronDown, ChevronLeft, ChevronRight, PlusCircle, TrendingUp, TrendingDown, X, CalendarDays } from "lucide-react";
-import { formatAbbreviatedCurrency, formatCompactCurrency, formatCurrency } from "@/lib/metrics";
+import { formatAbbreviatedCurrency, formatCurrency } from "@/lib/metrics";
 import { zonedDayKey } from "@/lib/timezone";
 import { Badge } from "@/components/ui/badge";
 import { TradeForm } from "@/components/trade-form";
@@ -239,7 +239,7 @@ export function CalendarClient({
                             }`}
                           >
                             <span className="sm:hidden">{formatAbbreviatedCurrency(pnl).replace("$", "")}</span>
-                            <span className="hidden sm:inline">{pnl >= 0 ? "+" : "-"}{formatCompactCurrency(Math.abs(pnl))}</span>
+                            <span className="hidden sm:inline">{pnl >= 0 ? "+" : "-"}{formatCurrency(Math.abs(pnl))}</span>
                           </div>
                           <div className="hidden truncate whitespace-nowrap text-[11px] text-[var(--text-muted)] sm:block">
                             {dayTrades.length} trade{dayTrades.length > 1 ? "s" : ""}
@@ -288,7 +288,7 @@ export function CalendarClient({
                       }`}
                     >
                       {weekTrades.length > 0 && (weekPnl >= 0 ? "+" : "-")}
-                      {formatCompactCurrency(Math.abs(weekPnl))}
+                      {formatCurrency(Math.abs(weekPnl))}
                     </div>
                     <div className="truncate whitespace-nowrap text-[11px] text-[var(--text-muted)]">
                       {weekTrades.length} trade{weekTrades.length === 1 ? "" : "s"}
