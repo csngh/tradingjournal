@@ -24,18 +24,21 @@ export function StatsGrid({
   equityValues,
   netPnl,
   totalFees,
+  scratches,
 }: {
   stats: TradeStats;
   dayStreaks: StreakInfo;
   equityValues: number[];
-  /** True net P&L / fees across every trade, unaffected by the count/exclude-breakeven setting — defaults to `stats` if omitted. */
+  /** True net P&L / fees / breakeven count across every trade, unaffected by the count/exclude-breakeven setting — defaults to `stats` if omitted. */
   netPnl?: number;
   totalFees?: number;
+  scratches?: number;
 }) {
   const hasTrades = stats.totalTrades > 0;
   const winLossRatio = stats.avgLoss > 0 ? stats.avgWin / stats.avgLoss : null;
   const trueNetPnl = netPnl ?? stats.netPnl;
   const trueTotalFees = totalFees ?? stats.totalFees;
+  const trueScratches = scratches ?? stats.scratches;
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 xl:grid-rows-2">
@@ -47,7 +50,7 @@ export function StatsGrid({
       >
         <WinRateGauge
           wins={stats.wins}
-          scratches={stats.scratches}
+          scratches={trueScratches}
           losses={stats.losses}
           winRate={stats.winRate}
         />

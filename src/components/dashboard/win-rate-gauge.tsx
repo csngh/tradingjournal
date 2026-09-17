@@ -2,8 +2,9 @@ const CX = 90;
 const CY = 86;
 const R = 72;
 const STROKE = 15;
-/** ~2px of surface gap between segments, expressed in degrees at this radius. */
-const GAP_DEG = (2 / ((Math.PI * R) / 180)) * 1.4;
+/** Visual gap between segments, expressed in degrees at this radius. */
+const GAP_PX = 16;
+const GAP_DEG = (GAP_PX / R) * (180 / Math.PI);
 
 function polar(angleDeg: number) {
   const rad = (angleDeg * Math.PI) / 180;

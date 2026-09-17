@@ -220,6 +220,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
           equityValues={equityValues}
           netPnl={trueStats.netPnl}
           totalFees={trueStats.totalFees}
+          scratches={trueStats.scratches}
         />
       </div>
 

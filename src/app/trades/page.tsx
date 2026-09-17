@@ -1,4 +1,4 @@
-import { getAllAccounts, getTimezone, getTradesForAccounts } from "@/lib/data";
+import { getAllAccounts, getAppSettings, getTradesForAccounts } from "@/lib/data";
 import { resolveSelectedAccountIds } from "@/lib/filter";
 import { TradesClient } from "@/components/trades-client";
 
@@ -10,12 +10,19 @@ export default async function TradesPage({
   const params = await searchParams;
   const accountsParam = typeof params.accounts === "string" ? params.accounts : undefined;
 
-  const [allAccounts, timeZone] = await Promise.all([getAllAccounts(), getTimezone()]);
+  const [allAccounts, settings] = await Promise.all([getAllAccounts(), getAppSettings()]);
   const selectedIds = resolveSelectedAccountIds(accountsParam, allAccounts);
   const trades = await getTradesForAccounts(selectedIds);
   const sorted = [...trades].sort(
     (a, b) => new Date(b.exitTime).getTime() - new Date(a.exitTime).getTime()
   );
 
-  return <TradesClient accounts={allAccounts} trades={sorted} timeZone={timeZone} />;
+  return (
+    <TradesClient
+      accounts={allAccounts}
+      trades={sorted}
+      timeZone={settings.timezone}
+      countBreakeven={settings.countBreakeven}
+    />
+  );
 }

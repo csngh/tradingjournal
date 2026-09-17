@@ -79,7 +79,11 @@ export function CalendarClient({
     router.push(`${pathname}?${params.toString()}`);
   }
 
-  const currentRealYear = new Date().getFullYear();
+  const now = new Date();
+  const isCurrentMonth =
+    monthDate.getFullYear() === now.getFullYear() && monthDate.getMonth() === now.getMonth();
+
+  const currentRealYear = now.getFullYear();
   const yearOptions = Array.from(
     new Set([
       ...Array.from({ length: 11 }, (_, i) => currentRealYear - 8 + i),
@@ -128,6 +132,14 @@ export function CalendarClient({
           )}
         </div>
         <div className="flex items-center gap-2">
+          {!isCurrentMonth && (
+            <button
+              onClick={() => goToMonth(new Date(now.getFullYear(), now.getMonth(), 1))}
+              className="rounded-full border border-[var(--border)] px-3 py-1.5 text-[13px] font-medium text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)] cursor-pointer"
+            >
+              This month
+            </button>
+          )}
           <button
             onClick={() => goToMonth(new Date(monthDate.getFullYear(), monthDate.getMonth() - 1, 1))}
             className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer"

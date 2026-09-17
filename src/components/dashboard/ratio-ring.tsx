@@ -2,14 +2,10 @@ const SIZE = 58;
 const R = 22;
 const STROKE = 7;
 const CIRC = 2 * Math.PI * R;
-/** ~2px of surface gap on each side of a segment boundary. */
-const GAP = 2;
+/** Visual gap between segments. */
+const GAP = 8;
 
-/**
- * Two-segment ring showing how gross profit and gross loss split the total
- * traded flow. Half the ring is the breakeven mark (profit factor 1.0), shown
- * by the tick at the bottom.
- */
+/** Two-segment ring showing how gross profit and gross loss split the total traded flow. */
 export function RatioRing({ won, lost }: { won: number; lost: number }) {
   const total = won + lost;
   const wonShare = total > 0 ? won / total : 0;
@@ -47,6 +43,7 @@ export function RatioRing({ won, lost }: { won: number; lost: number }) {
               fill="none"
               stroke="url(#ratioWonGrad)"
               strokeWidth={STROKE}
+              strokeLinecap="round"
               strokeDasharray={`${wonLen} ${CIRC - wonLen}`}
               strokeDashoffset={-GAP / 2}
             />
@@ -57,21 +54,13 @@ export function RatioRing({ won, lost }: { won: number; lost: number }) {
               fill="none"
               stroke="url(#ratioLostGrad)"
               strokeWidth={STROKE}
+              strokeLinecap="round"
               strokeDasharray={`${lostLen} ${CIRC - lostLen}`}
               strokeDashoffset={-(wonShare * CIRC + GAP / 2)}
             />
           </>
         )}
       </g>
-      {/* Breakeven mark: half the ring = profit factor 1.0 */}
-      <rect
-        x={SIZE / 2 - 1}
-        y={SIZE / 2 + R - STROKE / 2 - 1}
-        width={2}
-        height={STROKE + 2}
-        rx={1}
-        fill="var(--bg-elevated)"
-      />
     </svg>
   );
 }

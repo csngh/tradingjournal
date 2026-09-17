@@ -4,9 +4,10 @@ import { useMemo, useState } from "react";
 import { PlusCircle, TrendingUp, TrendingDown, ListOrdered, Download } from "lucide-react";
 import { TradeForm } from "@/components/trade-form";
 import { TradesFilterBar, EMPTY_FILTERS, isFiltersEmpty, type TradeFilters } from "@/components/trades-filter-bar";
+import { TradesSummary } from "@/components/trades-summary";
 import { Badge } from "@/components/ui/badge";
 import { primaryButtonClass, secondaryButtonClass } from "@/components/ui/form";
-import { formatCurrency, isScratchTrade } from "@/lib/metrics";
+import { formatCurrency, isScratchTrade, computeTradeStats } from "@/lib/metrics";
 import { formatZonedDate, zonedDayKey } from "@/lib/timezone";
 import { tradesToCsv, downloadCsv } from "@/lib/csv";
 import type { Account, Trade } from "@/db/schema";
@@ -15,10 +16,12 @@ export function TradesClient({
   accounts,
   trades,
   timeZone,
+  countBreakeven,
 }: {
   accounts: Account[];
   trades: Trade[];
   timeZone: string;
+  countBreakeven: boolean;
 }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Trade | null>(null);
@@ -73,6 +76,19 @@ export function TradesClient({
     });
   }, [trades, filters, timeZone]);
 
+  const metricsTrades = useMemo(
+    () => (countBreakeven ? filteredTrades : filteredTrades.filter((t) => !t.isBreakeven)),
+    [filteredTrades, countBreakeven]
+  );
+  const filteredStats = useMemo(
+    () => computeTradeStats(metricsTrades, timeZone),
+    [metricsTrades, timeZone]
+  );
+  const trueFilteredStats = useMemo(
+    () => computeTradeStats(filteredTrades, timeZone),
+    [filteredTrades, timeZone]
+  );
+
   function handleExport() {
     const csv = tradesToCsv(filteredTrades, accounts, timeZone);
     const stamp = new Date().toISOString().slice(0, 10);
@@ -124,6 +140,15 @@ export function TradesClient({
             <p className="-mb-1 text-xs text-[var(--text-muted)]">
               Showing {filteredTrades.length} of {trades.length} trades
             </p>
+          )}
+
+          {filteredTrades.length > 0 && (
+            <TradesSummary
+              stats={filteredStats}
+              netPnl={trueFilteredStats.netPnl}
+              totalTrades={trueFilteredStats.totalTrades}
+              scratches={trueFilteredStats.scratches}
+            />
           )}
 
           {filteredTrades.length === 0 ? (

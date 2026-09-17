@@ -213,9 +213,10 @@ export function TradeForm({
             <input
               required
               type="datetime-local"
-              className={inputClass}
+              className={`${inputClass} cursor-pointer`}
               value={entryTime}
               onChange={(e) => handleEntryTimeChange(e.target.value)}
+              onClick={(e) => e.currentTarget.showPicker?.()}
             />
             <p className="mt-1 text-[11px] text-[var(--text-muted)]">
               Snapped to this timeframe&apos;s candle close · {timeZone}

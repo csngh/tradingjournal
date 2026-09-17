@@ -64,18 +64,20 @@ export function TradesFilterBar({
           <label className={labelClass}>From</label>
           <input
             type="date"
-            className={inputClass}
+            className={`${inputClass} cursor-pointer`}
             value={filters.dateFrom}
             onChange={(e) => set("dateFrom", e.target.value)}
+            onClick={(e) => e.currentTarget.showPicker?.()}
           />
         </div>
         <div>
           <label className={labelClass}>To</label>
           <input
             type="date"
-            className={inputClass}
+            className={`${inputClass} cursor-pointer`}
             value={filters.dateTo}
             onChange={(e) => set("dateTo", e.target.value)}
+            onClick={(e) => e.currentTarget.showPicker?.()}
           />
         </div>
         <div>
