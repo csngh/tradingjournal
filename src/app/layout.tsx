@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Futures Journal",
+  title: "Gringotts Trading Journal",
   description: "A clean, modern futures trading journal.",
 };
 
@@ -52,7 +52,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
             <header className="relative z-20 flex shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--bg)]/80 px-4 py-3 backdrop-blur md:px-8">
               <div className="text-sm font-medium text-[var(--text-muted)] md:hidden">
-                Futures Journal
+                Gringotts Trading Journal
               </div>
               <div className="hidden md:block" />
               <div className="flex items-center gap-3">

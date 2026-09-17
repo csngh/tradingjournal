@@ -1,4 +1,4 @@
-# Futures Journal
+# Gringotts Trading Journal
 
 A clean, local-first futures trading journal. Track multiple prop firm / broker
 accounts, log trades, and see balance, trailing drawdown, targets, and

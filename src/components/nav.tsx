@@ -19,12 +19,12 @@ export function Sidebar() {
 
   return (
     <aside className="hidden md:flex md:w-60 md:flex-col md:border-r md:border-[var(--border)] md:bg-[var(--bg-elevated)]">
-      <div className="flex items-center gap-2 px-6 py-6">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg [background-image:var(--gradient-accent)] text-white">
+      <div className="flex items-center gap-2.5 px-6 py-6">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg [background-image:var(--gradient-accent)] text-white">
           <LineChart size={16} />
         </div>
-        <span className="text-[15px] font-semibold tracking-tight text-[var(--text)]">
-          Futures Journal
+        <span className="min-w-0 flex-1 text-[13px] font-semibold leading-tight tracking-tight text-[var(--text)]">
+          Gringotts Trading Journal
         </span>
       </div>
 

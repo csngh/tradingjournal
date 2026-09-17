@@ -2,11 +2,17 @@
   "name": "trade-journal",
   "version": "0.1.0",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build:electron": "node scripts/build-electron.mjs",
+    "package:mac:dir": "electron-builder --mac --dir",
+    "inject:resources": "node scripts/inject-resources.mjs",
+    "dist:mac": "npm run build:electron && npm run package:mac:dir && npm run inject:resources",
+    "dist:mac:dmg": "npm run dist:mac && electron-builder --mac --prepackaged \"release/mac-arm64/Gringotts Trading Journal.app\""
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
@@ -21,6 +27,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.2.0",
     "@tailwindcss/postcss": "^4",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^20",
@@ -28,6 +35,8 @@
     "@types/react-dom": "^19",
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
+    "electron": "^44.4.1",
+    "electron-builder": "^26.15.3",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",
@@ -40,5 +49,25 @@
     "esbuild@0.28.2": true,
     "fsevents@2.3.3": true,
     "unrs-resolver@1.12.2": true
+  },
+  "build": {
+    "appId": "com.gringottstradingjournal.app",
+    "productName": "Gringotts Trading Journal",
+    "npmRebuild": false,
+    "directories": {
+      "output": "release",
+      "app": "electron"
+    },
+    "files": [
+      "**/*",
+      "!**/node_modules",
+      "!**/node_modules/**"
+    ],
+    "mac": {
+      "category": "public.app-category.finance",
+      "target": [
+        "dmg"
+      ]
+    }
   }
 }
