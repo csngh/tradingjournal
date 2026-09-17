@@ -26,6 +26,9 @@ export function AccountForm({
   const [broker, setBroker] = useState(account?.broker ?? "");
   const [color, setColor] = useState(account?.color ?? COLORS[0]);
   const [role, setRole] = useState<AccountInput["role"]>(account?.role ?? "STANDALONE");
+  const [accountType, setAccountType] = useState<"" | "CHALLENGE" | "FUNDED">(
+    account?.accountType ?? ""
+  );
   const [masterId, setMasterId] = useState(account?.masterId ?? potentialMasters[0]?.id ?? "");
   const [copyRatio, setCopyRatio] = useState(String(account?.copyRatio ?? 1));
   const [startingBalance, setStartingBalance] = useState(
@@ -65,6 +68,7 @@ export function AccountForm({
       role,
       masterId: role === "FOLLOWER" ? masterId : null,
       copyRatio: role === "FOLLOWER" ? Number(copyRatio) || 1 : 1,
+      accountType: accountType || null,
       startingBalance: startingBalanceNum,
       balanceAdjustment,
       highestBalance: highestBalance ? Number(highestBalance) : null,
@@ -129,7 +133,7 @@ export function AccountForm({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div>
             <label className={labelClass}>Role</label>
             <select
@@ -140,6 +144,18 @@ export function AccountForm({
               <option value="STANDALONE">Standalone</option>
               <option value="MASTER">Master (copies to followers)</option>
               <option value="FOLLOWER">Follower (copies a master)</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Account type</label>
+            <select
+              className={inputClass}
+              value={accountType}
+              onChange={(e) => setAccountType(e.target.value as "" | "CHALLENGE" | "FUNDED")}
+            >
+              <option value="">Not set</option>
+              <option value="CHALLENGE">Challenge</option>
+              <option value="FUNDED">Funded</option>
             </select>
           </div>
           <div>

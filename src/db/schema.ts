@@ -13,6 +13,8 @@ export const accounts = sqliteTable("accounts", {
   masterId: text("master_id"),
   copyRatio: real("copy_ratio").notNull().default(1),
 
+  accountType: text("account_type", { enum: ["CHALLENGE", "FUNDED"] }),
+
   startingBalance: real("starting_balance").notNull(),
   balanceAdjustment: real("balance_adjustment").notNull().default(0),
   highestBalance: real("highest_balance"),
@@ -51,6 +53,8 @@ export const trades = sqliteTable("trades", {
   exitTime: text("exit_time").notNull(),
   fees: real("fees").notNull().default(0),
   pnl: real("pnl").notNull(),
+  isBreakeven: integer("is_breakeven", { mode: "boolean" }).notNull().default(false),
+  beOutcome: text("be_outcome", { enum: ["WIN", "LOSS"] }),
   tags: text("tags"),
   notes: text("notes"),
 
@@ -65,6 +69,7 @@ export const trades = sqliteTable("trades", {
 export const appSettings = sqliteTable("app_settings", {
   id: integer("id").primaryKey(),
   timezone: text("timezone").notNull().default("UTC"),
+  countBreakeven: integer("count_breakeven", { mode: "boolean" }).notNull().default(true),
 
   updatedAt: text("updated_at")
     .notNull()

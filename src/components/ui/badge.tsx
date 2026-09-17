@@ -2,18 +2,27 @@ import type { ReactNode } from "react";
 
 type Tone = "neutral" | "profit" | "loss" | "accent" | "warning";
 
-const toneClasses: Record<Tone, string> = {
-  neutral: "bg-[var(--surface-2)] text-[var(--text-muted)]",
-  profit: "bg-[var(--profit-soft)] text-[var(--profit)]",
-  loss: "bg-[var(--loss-soft)] text-[var(--loss)]",
-  accent: "bg-[var(--accent-soft)] text-[var(--accent)]",
-  warning: "bg-[var(--surface-2)] text-[var(--warning)]",
+const toneTextClasses: Record<Tone, string> = {
+  neutral: "text-[var(--text-muted)]",
+  profit: "text-[var(--profit)]",
+  loss: "text-[var(--loss)]",
+  accent: "text-[var(--accent)]",
+  warning: "text-[var(--warning)]",
+};
+
+const toneBackgrounds: Record<Tone, string> = {
+  neutral: "var(--surface-2)",
+  profit: "var(--gradient-profit-soft)",
+  loss: "var(--gradient-loss-soft)",
+  accent: "var(--gradient-accent-soft)",
+  warning: "var(--surface-2)",
 };
 
 export function Badge({ children, tone = "neutral" }: { children: ReactNode; tone?: Tone }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${toneClasses[tone]}`}
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${toneTextClasses[tone]}`}
+      style={{ background: toneBackgrounds[tone] }}
     >
       {children}
     </span>

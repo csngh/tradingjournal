@@ -42,13 +42,15 @@ export function StreakBadges({ wins, losses }: { wins: number; losses: number })
   return (
     <span className="flex shrink-0 items-center gap-1">
       <span
-        className="rounded-full bg-[var(--profit-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--profit)]"
+        className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-[var(--profit)]"
+        style={{ background: "var(--gradient-profit-soft)" }}
         title={`Best run: ${wins} in a row`}
       >
         {wins} W
       </span>
       <span
-        className="rounded-full bg-[var(--loss-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--loss)]"
+        className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-[var(--loss)]"
+        style={{ background: "var(--gradient-loss-soft)" }}
         title={`Worst run: ${losses} in a row`}
       >
         {losses} L

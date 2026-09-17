@@ -24,6 +24,19 @@ export async function updateTimezone(timezone: string) {
   revalidatePath("/settings");
 }
 
+export async function updateCountBreakeven(countBreakeven: boolean) {
+  await db
+    .insert(appSettings)
+    .values({ id: 1, countBreakeven })
+    .onConflictDoUpdate({
+      target: appSettings.id,
+      set: { countBreakeven, updatedAt: new Date().toISOString() },
+    });
+
+  revalidatePath("/");
+  revalidatePath("/settings");
+}
+
 // ---------- Accounts ----------
 
 export type AccountInput = {
@@ -33,6 +46,7 @@ export type AccountInput = {
   role: "MASTER" | "FOLLOWER" | "STANDALONE";
   masterId?: string | null;
   copyRatio: number;
+  accountType?: "CHALLENGE" | "FUNDED" | null;
   startingBalance: number;
   balanceAdjustment?: number;
   highestBalance?: number | null;
@@ -56,6 +70,7 @@ export async function createAccount(input: AccountInput) {
     role: input.role,
     masterId: input.role === "FOLLOWER" ? input.masterId ?? null : null,
     copyRatio: input.copyRatio,
+    accountType: input.accountType ?? null,
     startingBalance: input.startingBalance,
     balanceAdjustment: input.balanceAdjustment ?? 0,
     highestBalance: input.highestBalance ?? null,
@@ -81,6 +96,7 @@ export async function updateAccount(id: string, input: AccountInput) {
       role: input.role,
       masterId: input.role === "FOLLOWER" ? input.masterId ?? null : null,
       copyRatio: input.copyRatio,
+      accountType: input.accountType ?? null,
       startingBalance: input.startingBalance,
       balanceAdjustment: input.balanceAdjustment ?? 0,
       highestBalance: input.highestBalance ?? null,
@@ -114,6 +130,8 @@ export type TradeInput = {
   entryTime: string;
   fees: number;
   pnl: number;
+  isBreakeven: boolean;
+  beOutcome?: "WIN" | "LOSS" | null;
   tags?: string | null;
   notes?: string | null;
 };
@@ -146,6 +164,8 @@ async function propagateToFollowers(
       exitTime: base.entryTime,
       fees: fee,
       pnl: perContractPnl * scaledContracts,
+      isBreakeven: base.isBreakeven,
+      beOutcome: base.beOutcome ?? null,
       tags: base.tags ?? null,
       notes: base.notes ?? null,
     };
@@ -172,6 +192,8 @@ export async function createTrade(input: TradeInput) {
     exitTime: input.entryTime,
     fees: input.fees,
     pnl: input.pnl,
+    isBreakeven: input.isBreakeven,
+    beOutcome: input.beOutcome ?? null,
     tags: input.tags ?? null,
     notes: input.notes ?? null,
   });
@@ -209,6 +231,8 @@ export async function updateTrade(id: string, input: TradeInput) {
       exitTime: input.entryTime,
       fees: input.fees,
       pnl: input.pnl,
+      isBreakeven: input.isBreakeven,
+      beOutcome: input.beOutcome ?? null,
       tags: input.tags ?? null,
       notes: input.notes ?? null,
       updatedAt: new Date().toISOString(),

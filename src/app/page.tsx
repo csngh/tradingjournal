@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Scale, ShieldAlert, Target, LayoutDashboard, LineChart, Crown, Link2 } from "lucide-react";
-import { getAllAccounts, getTimezone, getTradesForAccounts } from "@/lib/data";
+import { getAllAccounts, getAppSettings, getTradesForAccounts } from "@/lib/data";
 import { resolveSelectedAccountIds } from "@/lib/filter";
 import {
   computeBalance,
@@ -9,7 +9,6 @@ import {
   computeTargetProgress,
   computeTradeStats,
   computeTrailingDrawdown,
-  formatCompactCurrency,
   formatCurrency,
 } from "@/lib/metrics";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +24,8 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
   const params = await searchParams;
   const accountsParam = typeof params.accounts === "string" ? params.accounts : undefined;
 
-  const [allAccounts, timeZone] = await Promise.all([getAllAccounts(), getTimezone()]);
+  const [allAccounts, settings] = await Promise.all([getAllAccounts(), getAppSettings()]);
+  const timeZone = settings.timezone;
 
   if (allAccounts.length === 0) {
     return (
@@ -49,8 +49,10 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
     tradesByAccount.set(t.accountId, arr);
   }
 
-  const stats = computeTradeStats(trades, timeZone);
-  const dayStreaks = computeDayStreaks(trades, timeZone);
+  const metricsTrades = settings.countBreakeven ? trades : trades.filter((t) => !t.isBreakeven);
+  const stats = computeTradeStats(metricsTrades, timeZone);
+  const trueStats = computeTradeStats(trades, timeZone);
+  const dayStreaks = computeDayStreaks(metricsTrades, timeZone);
   const equitySeries = computeCombinedEquitySeries(selectedAccounts, trades);
   const equityValues = equitySeries.map((p) => p.balance);
   const combinedBalance = equityValues[equityValues.length - 1];
@@ -70,7 +72,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
           </h1>
           <p className="text-sm text-[var(--text-muted)]">
             {singleAccount
-              ? `${singleAccount.broker ?? "Account"} · started ${formatCompactCurrency(singleAccount.startingBalance)}`
+              ? `${singleAccount.broker ?? "Account"} · started ${formatCurrency(singleAccount.startingBalance)}`
               : `Combined view across ${selectedAccounts.length} account${selectedAccounts.length === 1 ? "" : "s"}`}
           </p>
         </div>
@@ -90,11 +92,11 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
           </div>
           <div
             className={`mt-1.5 text-xs font-medium ${
-              stats.netPnl >= 0 ? "text-[var(--profit)]" : "text-[var(--loss)]"
+              trueStats.netPnl >= 0 ? "text-[var(--profit)]" : "text-[var(--loss)]"
             }`}
           >
-            {stats.netPnl >= 0 ? "+" : "-"}
-            {formatCurrency(Math.abs(stats.netPnl))} logged here
+            {trueStats.netPnl >= 0 ? "+" : "-"}
+            {formatCurrency(Math.abs(trueStats.netPnl))} logged here
           </div>
         </div>
 
@@ -124,7 +126,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
               />
             </div>
             <div className="mt-1.5 text-xs text-[var(--text-muted)]">
-              cushion · stop-out {formatCompactCurrency(drawdown.threshold)}
+              cushion · stop-out {formatCurrency(drawdown.threshold)}
               {drawdown.isLocked && " · locked"}
             </div>
           </div>
@@ -143,15 +145,15 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
                 target.reached ? "text-[var(--profit)]" : "text-[var(--text)]"
               }`}
             >
-              {Math.min(100, target.progressPct).toFixed(0)}%
+              {target.progressPct.toFixed(2)}%
             </div>
             <div className="mt-2">
               <Progress pct={target.progressPct} tone={target.reached ? "profit" : "accent"} />
             </div>
             <div className="mt-1.5 text-xs text-[var(--text-muted)]">
               {target.reached
-                ? `target of ${formatCompactCurrency(target.target)} reached`
-                : `${formatCurrency(target.remaining)} to go of ${formatCompactCurrency(target.target)}`}
+                ? `target of ${formatCurrency(target.target)} reached`
+                : `${formatCurrency(target.remaining)} to go of ${formatCurrency(target.target)}`}
             </div>
           </div>
         ) : null}
@@ -194,7 +196,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
                       tone={dd.breached ? "loss" : "profit"}
                     />
                     <p className="mt-1 text-[11px] text-[var(--text-muted)]">
-                      {formatCompactCurrency(Math.max(0, dd.distanceToBreach))} cushion
+                      {formatCurrency(Math.max(0, dd.distanceToBreach))} cushion
                     </p>
                   </div>
                 )}
@@ -202,7 +204,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
                   <div className="mt-2">
                     <Progress pct={tg.progressPct} tone={tg.reached ? "profit" : "accent"} />
                     <p className="mt-1 text-[11px] text-[var(--text-muted)]">
-                      {tg.progressPct.toFixed(0)}% to target
+                      {tg.progressPct.toFixed(2)}% to target
                     </p>
                   </div>
                 )}
@@ -211,7 +213,13 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
           })}
       </div>
 
-      <StatsGrid stats={stats} dayStreaks={dayStreaks} equityValues={equityValues} />
+      <StatsGrid
+        stats={stats}
+        dayStreaks={dayStreaks}
+        equityValues={equityValues}
+        netPnl={trueStats.netPnl}
+        totalFees={trueStats.totalFees}
+      />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <div className="xl:col-span-2">
@@ -221,9 +229,9 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
                 <LineChart size={17} className="text-[var(--accent)]" />
                 Equity curve
               </h2>
-              <Badge tone={stats.netPnl >= 0 ? "profit" : "loss"}>
-                {stats.netPnl >= 0 ? "+" : "-"}
-                {formatCurrency(Math.abs(stats.netPnl))}
+              <Badge tone={trueStats.netPnl >= 0 ? "profit" : "loss"}>
+                {trueStats.netPnl >= 0 ? "+" : "-"}
+                {formatCurrency(Math.abs(trueStats.netPnl))}
               </Badge>
             </div>
             {equityValues.length > 1 ? (

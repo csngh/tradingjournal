@@ -33,11 +33,21 @@ export function Sparkline({ values, tone }: { values: number[]; tone: "profit" |
     })
     .join(" ");
 
-  const color = tone === "profit" ? "var(--profit)" : "var(--loss)";
+  const gradId = tone === "profit" ? "sparklineProfitGrad" : "sparklineLossGrad";
 
   return (
     <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="presentation">
-      <path d={d} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <defs>
+        <linearGradient id="sparklineProfitGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="var(--profit)" />
+          <stop offset="100%" stopColor="var(--profit-2)" />
+        </linearGradient>
+        <linearGradient id="sparklineLossGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="var(--loss)" />
+          <stop offset="100%" stopColor="var(--loss-2)" />
+        </linearGradient>
+      </defs>
+      <path d={d} fill="none" stroke={`url(#${gradId})`} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

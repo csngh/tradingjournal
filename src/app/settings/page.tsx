@@ -1,12 +1,12 @@
 import { Settings as SettingsIcon } from "lucide-react";
-import { getTimezone } from "@/lib/data";
+import { getAppSettings } from "@/lib/data";
 import { listTimezones } from "@/lib/timezone";
 import { SettingsClient } from "@/components/settings-client";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const currentTimezone = await getTimezone();
+  const settings = await getAppSettings();
   const timezones = listTimezones();
 
   return (
@@ -15,7 +15,11 @@ export default async function SettingsPage() {
         <SettingsIcon size={20} className="text-[var(--accent)]" />
         Settings
       </h1>
-      <SettingsClient currentTimezone={currentTimezone} timezones={timezones} />
+      <SettingsClient
+        currentTimezone={settings.timezone}
+        timezones={timezones}
+        currentCountBreakeven={settings.countBreakeven}
+      />
     </div>
   );
 }

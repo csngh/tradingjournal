@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { accounts, appSettings, trades } from "@/db/schema";
 import { asc, eq, inArray } from "drizzle-orm";
-import type { Account, Trade } from "@/db/schema";
+import type { Account, AppSettings, Trade } from "@/db/schema";
 import { getSystemTimezone } from "@/lib/timezone";
 
 export async function getAllAccounts(): Promise<Account[]> {
@@ -29,11 +29,17 @@ export async function getFollowers(masterId: string): Promise<Account[]> {
   return all.filter((a) => a.masterId === masterId);
 }
 
-export async function getTimezone(): Promise<string> {
-  const [row] = await db.select().from(appSettings).where(eq(appSettings.id, 1));
-  if (row) return row.timezone;
+export async function getAppSettings(): Promise<AppSettings> {
+  const [existing] = await db.select().from(appSettings).where(eq(appSettings.id, 1));
+  if (existing) return existing;
 
   const fallback = getSystemTimezone();
   await db.insert(appSettings).values({ id: 1, timezone: fallback });
-  return fallback;
+  const [created] = await db.select().from(appSettings).where(eq(appSettings.id, 1));
+  return created;
+}
+
+export async function getTimezone(): Promise<string> {
+  const settings = await getAppSettings();
+  return settings.timezone;
 }

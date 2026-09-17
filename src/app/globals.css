@@ -11,12 +11,29 @@
   --text-faint: #9999a6;
   --accent: #6366f1;
   --accent-soft: #eef0ff;
+  --accent-light: #818cf8;
+  --accent-2: #4f46e5;
+  --accent-soft-2: #dbe0ff;
   --profit: #16a34a;
   --profit-soft: #e8f9ee;
+  --profit-2: #166534;
+  --profit-soft-2: #c9f3da;
   --loss: #e11d48;
   --loss-soft: #fdecf0;
+  --loss-2: #9f1239;
+  --loss-soft-2: #fbd2dc;
   --warning: #d97706;
+  --warning-light: #f59e0b;
+  --warning-2: #b45309;
   --radius: 14px;
+
+  --gradient-profit: linear-gradient(135deg, var(--profit), var(--profit-2));
+  --gradient-loss: linear-gradient(135deg, var(--loss), var(--loss-2));
+  --gradient-accent: linear-gradient(135deg, var(--accent-light), var(--accent-2));
+  --gradient-warning: linear-gradient(135deg, var(--warning-light), var(--warning-2));
+  --gradient-profit-soft: linear-gradient(135deg, var(--profit-soft), var(--profit-soft-2));
+  --gradient-loss-soft: linear-gradient(135deg, var(--loss-soft), var(--loss-soft-2));
+  --gradient-accent-soft: linear-gradient(135deg, var(--accent-soft), var(--accent-soft-2));
 }
 
 :root[data-theme="dark"] {
@@ -30,11 +47,20 @@
   --text-faint: #64646f;
   --accent: #818cf8;
   --accent-soft: #1e1e3a;
+  --accent-light: #a5b4fc;
+  --accent-2: #4f46e5;
+  --accent-soft-2: #2b2b52;
   --profit: #34d399;
   --profit-soft: #0f2b21;
+  --profit-2: #047857;
+  --profit-soft-2: #164a37;
   --loss: #fb7185;
   --loss-soft: #351520;
+  --loss-2: #be123c;
+  --loss-soft-2: #4a1c2d;
   --warning: #fbbf24;
+  --warning-light: #fcd34d;
+  --warning-2: #d97706;
 }
 
 @theme inline {

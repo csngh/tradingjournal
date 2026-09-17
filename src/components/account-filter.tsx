@@ -88,7 +88,7 @@ export function AccountFilter({ accounts }: { accounts: Account[] }) {
                   />
                   <span className="truncate">{a.name}</span>
                   {a.role === "MASTER" && (
-                    <span className="shrink-0 rounded-full bg-[var(--accent-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
+                    <span className="shrink-0 rounded-full [background-image:var(--gradient-accent-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--accent)]">
                       MASTER
                     </span>
                   )}

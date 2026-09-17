@@ -34,9 +34,9 @@ export function WinRateGauge({
   const segments: Segment[] = total
     ? (
       [
-        { share: wins / total, color: "var(--profit)" },
+        { share: wins / total, color: "url(#winRateProfitGrad)" },
         { share: scratches / total, color: "var(--text-faint)" },
-        { share: losses / total, color: "var(--loss)" },
+        { share: losses / total, color: "url(#winRateLossGrad)" },
       ] as Segment[]
     ).filter((s) => s.share > 0)
     : [];
@@ -58,6 +58,16 @@ export function WinRateGauge({
   return (
     <div className="flex w-full flex-col items-center">
       <svg viewBox="0 0 180 106" className="w-full max-w-[270px]" role="img" aria-label={`Win rate ${winRate.toFixed(2)} percent`}>
+        <defs>
+          <linearGradient id="winRateProfitGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="var(--profit)" />
+            <stop offset="100%" stopColor="var(--profit-2)" />
+          </linearGradient>
+          <linearGradient id="winRateLossGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="var(--loss)" />
+            <stop offset="100%" stopColor="var(--loss-2)" />
+          </linearGradient>
+        </defs>
         <path d={arc(180, 0)} fill="none" stroke="var(--surface-2)" strokeWidth={STROKE} strokeLinecap="round" />
         {paths.map((p, i) => (
           <path key={i} d={p.d} fill="none" stroke={p.color} strokeWidth={STROKE} strokeLinecap="round" />
@@ -73,19 +83,29 @@ export function WinRateGauge({
       </svg>
 
       <div className="mt-1 flex w-full items-center justify-between px-1">
-        <Count value={wins} label="W" color="var(--profit)" />
-        <Count value={scratches} label="BE" color="var(--text-faint)" />
-        <Count value={losses} label="L" color="var(--loss)" />
+        <Count value={wins} label="W" color="var(--profit)" background="var(--gradient-profit-soft)" />
+        <Count value={scratches} label="BE" color="var(--text-faint)" background="var(--surface-2)" />
+        <Count value={losses} label="L" color="var(--loss)" background="var(--gradient-loss-soft)" />
       </div>
     </div>
   );
 }
 
-function Count({ value, label, color }: { value: number; label: string; color: string }) {
+function Count({
+  value,
+  label,
+  color,
+  background,
+}: {
+  value: number;
+  label: string;
+  color: string;
+  background: string;
+}) {
   return (
     <span
-      className="flex items-center gap-1 rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-xs font-semibold"
-      style={{ color }}
+      className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold"
+      style={{ color, background }}
       title={`${value} ${label === "W" ? "winning" : label === "L" ? "losing" : "breakeven"} trades`}
     >
       {value}

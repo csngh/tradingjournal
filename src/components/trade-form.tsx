@@ -47,6 +47,8 @@ export function TradeForm({
     String(trade?.pointValue ?? findFuturesSymbol(trade?.symbol ?? "")?.pointValue ?? "")
   );
   const [fees, setFees] = useState(String(trade?.fees ?? 0));
+  const [isBreakeven, setIsBreakeven] = useState(trade?.isBreakeven ?? false);
+  const [beOutcome, setBeOutcome] = useState<"" | "WIN" | "LOSS">(trade?.beOutcome ?? "");
   const [tags, setTags] = useState(trade?.tags ?? "");
   const [notes, setNotes] = useState(trade?.notes ?? "");
   const [submitting, setSubmitting] = useState(false);
@@ -103,6 +105,8 @@ export function TradeForm({
       entryTime: wallClockToUtcIso(entryTime, timeZone),
       fees: Number(fees) || 0,
       pnl: grossPnl,
+      isBreakeven,
+      beOutcome: isBreakeven && beOutcome ? beOutcome : null,
       tags: tags || null,
       notes: notes || null,
     };
@@ -226,11 +230,17 @@ export function TradeForm({
               required
               type="number"
               step="0.01"
-              className={inputClass}
+              className={`${inputClass} disabled:cursor-not-allowed disabled:opacity-50`}
               value={points}
               onChange={(e) => setPoints(e.target.value)}
               placeholder="e.g. 12.5 or -6"
+              disabled={isBreakeven}
             />
+            {isBreakeven && (
+              <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+                Locked to 0 — breakeven trades don&apos;t move points.
+              </p>
+            )}
           </div>
           <div>
             <label className={labelClass}>Point value ($/pt)</label>
@@ -266,13 +276,54 @@ export function TradeForm({
             <label className={labelClass}>Net P&amp;L</label>
             <div
               className={`flex h-9 items-center rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm font-semibold tabular ${
-                netPnl >= 0 ? "text-[var(--profit)]" : "text-[var(--loss)]"
+                isBreakeven ? "text-[var(--text-muted)]" : netPnl >= 0 ? "text-[var(--profit)]" : "text-[var(--loss)]"
               }`}
             >
               {netPnl >= 0 ? "+" : ""}
               {formatCurrency(netPnl)}
             </div>
           </div>
+        </div>
+
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
+          <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[var(--text)]">
+            <input
+              type="checkbox"
+              className="h-4 w-4 cursor-pointer accent-[var(--accent)]"
+              checked={isBreakeven}
+              onChange={(e) => {
+                setIsBreakeven(e.target.checked);
+                if (e.target.checked) {
+                  setPoints("0");
+                } else {
+                  setBeOutcome("");
+                }
+              }}
+            />
+            Mark as breakeven (BE)
+          </label>
+          <p className="mt-1 pl-6 text-[11px] text-[var(--text-muted)]">
+            Counts as a scratch, not a win or loss — even if fees push the net P&amp;L slightly
+            off zero.
+          </p>
+
+          {isBreakeven && (
+            <div className="mt-3 pl-6">
+              <label className={labelClass}>Ultimately a win or loss? (optional)</label>
+              <select
+                className={inputClass}
+                value={beOutcome}
+                onChange={(e) => setBeOutcome(e.target.value as "" | "WIN" | "LOSS")}
+              >
+                <option value="">Not decided yet</option>
+                <option value="WIN">Ultimately a win</option>
+                <option value="LOSS">Ultimately a loss</option>
+              </select>
+              <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+                Doesn&apos;t affect dashboard metrics — just tagged for your own analytics later.
+              </p>
+            </div>
+          )}
         </div>
 
         <div>

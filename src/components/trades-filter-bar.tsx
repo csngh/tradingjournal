@@ -142,9 +142,12 @@ export function TradesFilterBar({
             value={filters.result}
             onChange={(e) => set("result", e.target.value)}
           >
-            <option value="all">Win &amp; loss</option>
+            <option value="all">All results</option>
             <option value="win">Wins only</option>
             <option value="loss">Losses only</option>
+            <option value="be">Breakeven (all)</option>
+            <option value="be-win">Breakeven → win</option>
+            <option value="be-loss">Breakeven → loss</option>
           </select>
         </div>
       </div>

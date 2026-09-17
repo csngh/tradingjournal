@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { PlusCircle, TrendingUp, TrendingDown, ListOrdered } from "lucide-react";
+import { PlusCircle, TrendingUp, TrendingDown, ListOrdered, Download } from "lucide-react";
 import { TradeForm } from "@/components/trade-form";
 import { TradesFilterBar, EMPTY_FILTERS, isFiltersEmpty, type TradeFilters } from "@/components/trades-filter-bar";
 import { Badge } from "@/components/ui/badge";
-import { primaryButtonClass } from "@/components/ui/form";
-import { formatCurrency } from "@/lib/metrics";
+import { primaryButtonClass, secondaryButtonClass } from "@/components/ui/form";
+import { formatCurrency, isScratchTrade } from "@/lib/metrics";
 import { formatZonedDate, zonedDayKey } from "@/lib/timezone";
+import { tradesToCsv, downloadCsv } from "@/lib/csv";
 import type { Account, Trade } from "@/db/schema";
 
 export function TradesClient({
@@ -55,8 +56,12 @@ export function TradesClient({
       if (filters.timeframe !== "all" && t.timeframe !== filters.timeframe) return false;
 
       const net = t.pnl - t.fees;
-      if (filters.result === "win" && net <= 0) return false;
-      if (filters.result === "loss" && net >= 0) return false;
+      const scratch = isScratchTrade(t);
+      if (filters.result === "win" && (scratch || net <= 0)) return false;
+      if (filters.result === "loss" && (scratch || net >= 0)) return false;
+      if (filters.result === "be" && !scratch) return false;
+      if (filters.result === "be-win" && !(scratch && t.beOutcome === "WIN")) return false;
+      if (filters.result === "be-loss" && !(scratch && t.beOutcome === "LOSS")) return false;
 
       if (filters.dateFrom || filters.dateTo) {
         const day = zonedDayKey(t.exitTime, timeZone);
@@ -68,6 +73,12 @@ export function TradesClient({
     });
   }, [trades, filters, timeZone]);
 
+  function handleExport() {
+    const csv = tradesToCsv(filteredTrades, accounts, timeZone);
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadCsv(`trades-${stamp}.csv`, csv);
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
@@ -75,10 +86,20 @@ export function TradesClient({
           <ListOrdered size={20} className="text-[var(--accent)]" />
           Trades
         </h1>
-        <button onClick={openAdd} className={primaryButtonClass} disabled={accounts.length === 0}>
-          <PlusCircle size={16} />
-          Log trade
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleExport}
+            className={secondaryButtonClass}
+            disabled={filteredTrades.length === 0}
+          >
+            <Download size={16} />
+            Export CSV
+          </button>
+          <button onClick={openAdd} className={primaryButtonClass} disabled={accounts.length === 0}>
+            <PlusCircle size={16} />
+            Log trade
+          </button>
+        </div>
       </div>
 
       {accounts.length === 0 ? (
@@ -147,7 +168,10 @@ export function TradesClient({
                       </td>
                       <td className="px-4 py-3 font-medium text-[var(--text)]">{t.symbol}</td>
                       <td className="px-4 py-3">
-                        <Badge tone={t.side === "LONG" ? "profit" : "loss"}>{t.side}</Badge>
+                        <span className="flex items-center gap-1.5">
+                          <Badge tone={t.side === "LONG" ? "profit" : "loss"}>{t.side}</Badge>
+                          {t.isBreakeven && <Badge tone="neutral">BE</Badge>}
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-[var(--text-muted)]">{t.timeframe}</td>
                       <td className="px-4 py-3 text-right tabular">{t.contracts}</td>

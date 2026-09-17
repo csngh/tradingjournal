@@ -13,13 +13,15 @@ import {
   Archive,
   ShieldAlert,
   Target,
+  GraduationCap,
+  BadgeCheck,
 } from "lucide-react";
 import { AccountForm } from "@/components/account-form";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { primaryButtonClass } from "@/components/ui/form";
 import { deleteAccount } from "@/app/actions";
-import { formatCompactCurrency, formatCurrency } from "@/lib/metrics";
+import { formatCurrency } from "@/lib/metrics";
 import type { Account } from "@/db/schema";
 
 export type AccountWithMetrics = {
@@ -105,6 +107,18 @@ export function AccountsClient({ items }: { items: AccountWithMetrics[] }) {
                           COPY
                         </Badge>
                       )}
+                      {a.accountType === "CHALLENGE" && (
+                        <Badge tone="warning">
+                          <GraduationCap size={10} className="mr-0.5" />
+                          CHALLENGE
+                        </Badge>
+                      )}
+                      {a.accountType === "FUNDED" && (
+                        <Badge tone="profit">
+                          <BadgeCheck size={10} className="mr-0.5" />
+                          FUNDED
+                        </Badge>
+                      )}
                       {a.status !== "ACTIVE" && (
                         <Badge tone={a.status === "PASSED" ? "profit" : a.status === "BLOWN" ? "loss" : "neutral"}>
                           {a.status === "PASSED" && <CheckCircle2 size={10} className="mr-0.5" />}
@@ -127,7 +141,7 @@ export function AccountsClient({ items }: { items: AccountWithMetrics[] }) {
                   <button
                     onClick={() => handleDelete(a.id)}
                     disabled={deletingId === a.id}
-                    className="flex h-7 w-7 items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--loss-soft)] hover:text-[var(--loss)] cursor-pointer disabled:opacity-50"
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-[var(--text-muted)] hover:[background-image:var(--gradient-loss-soft)] hover:text-[var(--loss)] cursor-pointer disabled:opacity-50"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -138,7 +152,7 @@ export function AccountsClient({ items }: { items: AccountWithMetrics[] }) {
                 {formatCurrency(balance)}
               </div>
               <p className="text-xs text-[var(--text-muted)]">
-                {tradeCount} trade{tradeCount === 1 ? "" : "s"} · started {formatCompactCurrency(a.startingBalance)}
+                {tradeCount} trade{tradeCount === 1 ? "" : "s"} · started {formatCurrency(a.startingBalance)}
                 {a.feePerContract != null && ` · ${formatCurrency(a.feePerContract)}/contract`}
               </p>
 
@@ -162,7 +176,7 @@ export function AccountsClient({ items }: { items: AccountWithMetrics[] }) {
                       <ShieldAlert size={11} />
                       Drawdown cushion
                     </span>
-                    <span>{formatCompactCurrency(Math.max(0, drawdown.distanceToBreach))}</span>
+                    <span>{formatCurrency(Math.max(0, drawdown.distanceToBreach))}</span>
                   </div>
                   <Progress
                     pct={a.trailingDrawdown ? (drawdown.distanceToBreach / a.trailingDrawdown) * 100 : 100}
@@ -178,7 +192,7 @@ export function AccountsClient({ items }: { items: AccountWithMetrics[] }) {
                       <Target size={11} />
                       Target progress
                     </span>
-                    <span>{target.progressPct.toFixed(0)}%</span>
+                    <span>{target.progressPct.toFixed(2)}%</span>
                   </div>
                   <Progress pct={target.progressPct} tone={target.reached ? "profit" : "accent"} />
                 </div>

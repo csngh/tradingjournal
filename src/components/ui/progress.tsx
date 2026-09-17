@@ -7,10 +7,10 @@ export function Progress({
 }) {
   const clamped = Math.max(0, Math.min(100, pct));
   const color = {
-    accent: "var(--accent)",
-    profit: "var(--profit)",
-    loss: "var(--loss)",
-    warning: "var(--warning)",
+    accent: "var(--gradient-accent)",
+    profit: "var(--gradient-profit)",
+    loss: "var(--gradient-loss)",
+    warning: "var(--gradient-warning)",
   }[tone];
 
   return (

@@ -19,6 +19,16 @@ export function RatioRing({ won, lost }: { won: number; lost: number }) {
 
   return (
     <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} role="presentation">
+      <defs>
+        <linearGradient id="ratioWonGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="var(--profit)" />
+          <stop offset="100%" stopColor="var(--profit-2)" />
+        </linearGradient>
+        <linearGradient id="ratioLostGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="var(--loss)" />
+          <stop offset="100%" stopColor="var(--loss-2)" />
+        </linearGradient>
+      </defs>
       <g transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}>
         <circle
           cx={SIZE / 2}
@@ -35,7 +45,7 @@ export function RatioRing({ won, lost }: { won: number; lost: number }) {
               cy={SIZE / 2}
               r={R}
               fill="none"
-              stroke="var(--profit)"
+              stroke="url(#ratioWonGrad)"
               strokeWidth={STROKE}
               strokeDasharray={`${wonLen} ${CIRC - wonLen}`}
               strokeDashoffset={-GAP / 2}
@@ -45,7 +55,7 @@ export function RatioRing({ won, lost }: { won: number; lost: number }) {
               cy={SIZE / 2}
               r={R}
               fill="none"
-              stroke="var(--loss)"
+              stroke="url(#ratioLostGrad)"
               strokeWidth={STROKE}
               strokeDasharray={`${lostLen} ${CIRC - lostLen}`}
               strokeDashoffset={-(wonShare * CIRC + GAP / 2)}

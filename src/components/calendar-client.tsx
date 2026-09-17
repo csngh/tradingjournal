@@ -13,8 +13,8 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import { ChevronDown, ChevronLeft, ChevronRight, PlusCircle, TrendingUp, TrendingDown, X, CalendarDays } from "lucide-react";
-import { formatAbbreviatedCurrency, formatCurrency } from "@/lib/metrics";
+import { ChevronDown, ChevronLeft, ChevronRight, PlusCircle, TrendingUp, TrendingDown, Minus, X, CalendarDays } from "lucide-react";
+import { formatCurrency } from "@/lib/metrics";
 import { zonedDayKey } from "@/lib/timezone";
 import { Badge } from "@/components/ui/badge";
 import { TradeForm } from "@/components/trade-form";
@@ -116,7 +116,9 @@ export function CalendarClient({
           {monthTrades.length > 0 && (
             <div
               className={`rounded-full px-2.5 py-1 text-xs font-semibold tabular ${
-                monthPnl >= 0 ? "bg-[var(--profit-soft)] text-[var(--profit)]" : "bg-[var(--loss-soft)] text-[var(--loss)]"
+                monthPnl >= 0
+                  ? "[background-image:var(--gradient-profit-soft)] text-[var(--profit)]"
+                  : "[background-image:var(--gradient-loss-soft)] text-[var(--loss)]"
               }`}
               title="Net P&L for this month"
             >
@@ -213,14 +215,14 @@ export function CalendarClient({
                     <button
                       key={key}
                       onClick={() => (hasTrades ? setSelectedDay(key) : openAddForDay(key))}
-                      className={`flex min-h-0 flex-col items-start rounded-xl border p-1.5 text-left transition sm:p-2.5 ${
+                      className={`flex min-h-0 flex-col items-start rounded-xl border p-1 text-left transition sm:p-2 xl:p-2.5 ${
                         inMonth ? "border-[var(--border)]" : "border-transparent opacity-40"
                       } cursor-pointer hover:border-[var(--accent)]`}
                       style={{
                         background: hasTrades
                           ? pnl >= 0
-                            ? "var(--profit-soft)"
-                            : "var(--loss-soft)"
+                            ? "var(--gradient-profit-soft)"
+                            : "var(--gradient-loss-soft)"
                           : today
                             ? "var(--border)"
                             : "var(--surface-2)",
@@ -232,16 +234,16 @@ export function CalendarClient({
                       {hasTrades && (
                         <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-0.5 text-center">
                           <div
-                            className={`w-full truncate font-bold leading-tight tabular ${
-                              fillHeight ? "text-lg sm:text-2xl" : "text-sm 2xl:text-base"
+                            className={`w-full truncate font-bold leading-tight tabular tracking-tight ${
+                              fillHeight ? "text-[10px] sm:text-base md:text-lg xl:text-xl" : "text-[10px] 2xl:text-base"
                             } ${
                               pnl >= 0 ? "text-[var(--profit)]" : "text-[var(--loss)]"
                             }`}
                           >
-                            <span className="sm:hidden">{formatAbbreviatedCurrency(pnl).replace("$", "")}</span>
-                            <span className="hidden sm:inline">{pnl >= 0 ? "+" : "-"}{formatCurrency(Math.abs(pnl))}</span>
+                            {pnl >= 0 ? "+" : "-"}
+                            {formatCurrency(Math.abs(pnl))}
                           </div>
-                          <div className="hidden truncate whitespace-nowrap text-[11px] text-[var(--text-muted)] sm:block">
+                          <div className="truncate whitespace-nowrap text-[9px] text-[var(--text-muted)] sm:text-[11px]">
                             {dayTrades.length} trade{dayTrades.length > 1 ? "s" : ""}
                           </div>
                         </div>
@@ -270,8 +272,8 @@ export function CalendarClient({
                       weekTrades.length === 0
                         ? "var(--surface-2)"
                         : weekPnl >= 0
-                          ? "var(--profit-soft)"
-                          : "var(--loss-soft)",
+                          ? "var(--gradient-profit-soft)"
+                          : "var(--gradient-loss-soft)",
                   }}
                 >
                   <span className="shrink-0 text-xs font-medium text-[var(--text-muted)]">Weekly</span>
@@ -332,15 +334,26 @@ export function CalendarClient({
                     <div className="flex items-center gap-3 min-w-0">
                       <span
                         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                          net >= 0 ? "bg-[var(--profit-soft)] text-[var(--profit)]" : "bg-[var(--loss-soft)] text-[var(--loss)]"
+                          t.isBreakeven
+                            ? "bg-[var(--surface-2)] text-[var(--text-faint)]"
+                            : net >= 0
+                              ? "[background-image:var(--gradient-profit-soft)] text-[var(--profit)]"
+                              : "[background-image:var(--gradient-loss-soft)] text-[var(--loss)]"
                         }`}
                       >
-                        {net >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                        {t.isBreakeven ? (
+                          <Minus size={14} />
+                        ) : net >= 0 ? (
+                          <TrendingUp size={14} />
+                        ) : (
+                          <TrendingDown size={14} />
+                        )}
                       </span>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 text-sm font-medium text-[var(--text)]">
                           {t.symbol}
                           <Badge tone={t.side === "LONG" ? "profit" : "loss"}>{t.side}</Badge>
+                          {t.isBreakeven && <Badge tone="neutral">BE</Badge>}
                         </div>
                         <div className="truncate text-xs text-[var(--text-muted)]">
                           {account?.name} · {t.contracts} contract{t.contracts > 1 ? "s" : ""}

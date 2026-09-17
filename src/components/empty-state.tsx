@@ -18,7 +18,7 @@ export function EmptyState({
       <p className="mt-2 max-w-sm text-sm text-[var(--text-muted)]">{description}</p>
       <Link
         href={actionHref}
-        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+        className="mt-5 inline-flex items-center gap-2 rounded-xl [background-image:var(--gradient-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
       >
         <PlusCircle size={16} />
         {actionLabel}

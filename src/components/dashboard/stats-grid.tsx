@@ -4,15 +4,14 @@ import { WinRateGauge } from "@/components/dashboard/win-rate-gauge";
 import { RatioRing } from "@/components/dashboard/ratio-ring";
 import { SplitBar } from "@/components/dashboard/split-bar";
 import { Sparkline } from "@/components/dashboard/sparkline";
-import { formatCompactCurrency, formatCurrency } from "@/lib/metrics";
+import { formatCurrency } from "@/lib/metrics";
 import type { StreakInfo, TradeStats } from "@/lib/metrics";
 
 const valueClass = "text-[26px] font-semibold leading-none tracking-tight";
 const subClass = "mt-1.5 text-xs text-[var(--text-muted)]";
 
-function signedCurrency(value: number, compact = false) {
-  const body = compact ? formatCompactCurrency(Math.abs(value)) : formatCurrency(Math.abs(value));
-  return `${value < 0 ? "-" : "+"}${body}`;
+function signedCurrency(value: number) {
+  return `${value < 0 ? "-" : "+"}${formatCurrency(Math.abs(value))}`;
 }
 
 function toneClass(value: number) {
@@ -23,13 +22,20 @@ export function StatsGrid({
   stats,
   dayStreaks,
   equityValues,
+  netPnl,
+  totalFees,
 }: {
   stats: TradeStats;
   dayStreaks: StreakInfo;
   equityValues: number[];
+  /** True net P&L / fees across every trade, unaffected by the count/exclude-breakeven setting — defaults to `stats` if omitted. */
+  netPnl?: number;
+  totalFees?: number;
 }) {
   const hasTrades = stats.totalTrades > 0;
   const winLossRatio = stats.avgLoss > 0 ? stats.avgWin / stats.avgLoss : null;
+  const trueNetPnl = netPnl ?? stats.netPnl;
+  const trueTotalFees = totalFees ?? stats.totalFees;
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:grid-rows-2">
@@ -64,8 +70,8 @@ export function StatsGrid({
               {stats.profitFactor == null ? "—" : stats.profitFactor.toFixed(2)}
             </div>
             <div className={subClass}>
-              {formatCompactCurrency(stats.grossWinAmount)} won /{" "}
-              {formatCompactCurrency(stats.grossLossAmount)} lost
+              {formatCurrency(stats.grossWinAmount)} won /{" "}
+              {formatCurrency(stats.grossLossAmount)} lost
             </div>
           </div>
           <RatioRing won={stats.grossWinAmount} lost={stats.grossLossAmount} />
@@ -118,12 +124,12 @@ export function StatsGrid({
       >
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className={`${valueClass} ${toneClass(stats.netPnl)}`}>
-              {hasTrades ? signedCurrency(stats.netPnl, true) : "—"}
+            <div className={`${valueClass} ${toneClass(trueNetPnl)}`}>
+              {equityValues.length > 1 ? signedCurrency(trueNetPnl) : "—"}
             </div>
-            <div className={subClass}>{formatCurrency(stats.totalFees)} in fees</div>
+            <div className={subClass}>{formatCurrency(trueTotalFees)} in fees</div>
           </div>
-          <Sparkline values={equityValues} tone={stats.netPnl >= 0 ? "profit" : "loss"} />
+          <Sparkline values={equityValues} tone={trueNetPnl >= 0 ? "profit" : "loss"} />
         </div>
       </StatCard>
 

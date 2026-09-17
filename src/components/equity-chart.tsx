@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
-import { formatCompactCurrency, formatCurrency } from "@/lib/metrics";
+import { formatCurrency } from "@/lib/metrics";
 
 export type ChartPoint = { index: number; date: string; balance: number };
 
@@ -44,6 +44,10 @@ export function EquityChart({
               stopOpacity={0}
             />
           </linearGradient>
+          <linearGradient id="equityStroke" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor={positive ? "var(--profit)" : "var(--loss)"} />
+            <stop offset="100%" stopColor={positive ? "var(--profit-2)" : "var(--loss-2)"} />
+          </linearGradient>
         </defs>
         <XAxis dataKey="index" hide />
         <YAxis
@@ -66,7 +70,7 @@ export function EquityChart({
             stroke="var(--loss)"
             strokeDasharray="4 4"
             label={{
-              value: `Stop-out ${formatCompactCurrency(drawdownThreshold)}`,
+              value: `Stop-out ${formatCurrency(drawdownThreshold)}`,
               position: "insideBottomLeft",
               fill: "var(--loss)",
               fontSize: 11,
@@ -76,7 +80,7 @@ export function EquityChart({
         <Area
           type="monotone"
           dataKey="balance"
-          stroke={positive ? "var(--profit)" : "var(--loss)"}
+          stroke="url(#equityStroke)"
           strokeWidth={2}
           fill="url(#equityFill)"
         />

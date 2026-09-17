@@ -20,7 +20,7 @@ export function Sidebar() {
   return (
     <aside className="hidden md:flex md:w-60 md:flex-col md:border-r md:border-[var(--border)] md:bg-[var(--bg-elevated)]">
       <div className="flex items-center gap-2 px-6 py-6">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent)] text-white">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg [background-image:var(--gradient-accent)] text-white">
           <LineChart size={16} />
         </div>
         <span className="text-[15px] font-semibold tracking-tight text-[var(--text)]">
@@ -38,7 +38,7 @@ export function Sidebar() {
               key={link.href}
               href={qs ? `${link.href}?${qs}` : link.href}
               className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${active
-                  ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+                  ? "[background-image:var(--gradient-accent-soft)] text-[var(--accent)]"
                   : "text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
                 }`}
             >

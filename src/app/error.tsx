@@ -23,7 +23,7 @@ export default function Error({
       </p>
       <button
         onClick={reset}
-        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 cursor-pointer"
+        className="mt-5 inline-flex items-center gap-2 rounded-xl [background-image:var(--gradient-accent)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 cursor-pointer"
       >
         Try again
       </button>

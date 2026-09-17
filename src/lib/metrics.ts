@@ -7,6 +7,11 @@ export function netPnl(trade: Trade): number {
   return trade.pnl - trade.fees;
 }
 
+/** A trade counts as a scratch if explicitly marked breakeven, or its net happens to land on exactly zero. */
+export function isScratchTrade(trade: Trade): boolean {
+  return trade.isBreakeven || netPnl(trade) === 0;
+}
+
 function sortedByExit(trades: Trade[]): Trade[] {
   return [...trades].sort(
     (a, b) => new Date(a.exitTime).getTime() - new Date(b.exitTime).getTime()
@@ -231,10 +236,11 @@ export function computeDayStreaks(trades: Trade[], timeZone: string): StreakInfo
 export function computeTradeStats(trades: Trade[], timeZone: string): TradeStats {
   const sorted = sortedByExit(trades);
   const nets = sorted.map(netPnl);
+  const scratchFlags = sorted.map(isScratchTrade);
 
-  const wins = nets.filter((n) => n > 0);
-  const losses = nets.filter((n) => n < 0);
-  const scratches = nets.filter((n) => n === 0);
+  const wins = nets.filter((n, i) => !scratchFlags[i] && n > 0);
+  const losses = nets.filter((n, i) => !scratchFlags[i] && n < 0);
+  const scratches = nets.filter((n, i) => scratchFlags[i]);
 
   const grossWinAmount = wins.reduce((s, n) => s + n, 0);
   const grossLossAmount = Math.abs(losses.reduce((s, n) => s + n, 0));
@@ -258,7 +264,8 @@ export function computeTradeStats(trades: Trade[], timeZone: string): TradeStats
     if (!worstDay || pnl < worstDay.pnl) worstDay = { date, pnl };
   }
 
-  const tradeStreaks = streaksFrom(nets);
+  const streakValues = nets.map((n, i) => (scratchFlags[i] ? 0 : n));
+  const tradeStreaks = streaksFrom(streakValues);
 
   const avgContractsPerTrade =
     sorted.length > 0
@@ -300,20 +307,3 @@ export function formatCurrency(value: number): string {
   })}`;
 }
 
-export function formatAbbreviatedCurrency(value: number): string {
-  const sign = value < 0 ? "-" : "";
-  const abs = Math.abs(value);
-  if (abs >= 1000) {
-    return `${sign}$${(abs / 1000).toFixed(abs >= 10000 ? 0 : 1)}k`;
-  }
-  return `${sign}$${abs.toFixed(0)}`;
-}
-
-export function formatCompactCurrency(value: number): string {
-  const sign = value < 0 ? "-" : "";
-  const abs = Math.abs(value);
-  return `${sign}$${abs.toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  })}`;
-}
