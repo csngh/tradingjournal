@@ -23,7 +23,7 @@ export function TradesPanel({ trades, timeZone }: { trades: Trade[]; timeZone: s
         );
 
   return (
-    <div className="flex h-full max-h-[560px] min-h-0 flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+    <div className="flex h-full min-h-0 flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-1.5 text-[17px] font-semibold text-[var(--text)]">
           Trades

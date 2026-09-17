@@ -50,7 +50,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           </Suspense>
 
           <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-            <header className="relative z-20 flex shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--bg)]/80 px-4 py-3.5 backdrop-blur md:px-8">
+            <header className="relative z-20 flex shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--bg)]/80 px-4 py-3 backdrop-blur md:px-8">
               <div className="text-sm font-medium text-[var(--text-muted)] md:hidden">
                 Futures Journal
               </div>
@@ -63,7 +63,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               </div>
             </header>
 
-            <main className="min-h-0 flex-1 overflow-y-auto px-4 py-6 pb-24 md:px-8 md:py-8 md:pb-8">
+            <main className="min-h-0 flex-1 overflow-y-auto px-4 py-6 pb-24 md:px-8 md:py-6 md:pb-6">
               {children}
             </main>
           </div>

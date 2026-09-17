@@ -20,7 +20,7 @@ export function EquityChart({
 }: {
   data: ChartPoint[];
   drawdownThreshold?: number | null;
-  height?: number;
+  height?: number | `${number}%`;
 }) {
   const values = data.map((d) => d.balance);
   const min = Math.min(...values, drawdownThreshold ?? Infinity);

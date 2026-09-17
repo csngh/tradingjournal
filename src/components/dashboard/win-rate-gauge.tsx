@@ -57,7 +57,7 @@ export function WinRateGauge({
 
   return (
     <div className="flex w-full flex-col items-center">
-      <svg viewBox="0 0 180 106" className="w-full max-w-[270px]" role="img" aria-label={`Win rate ${winRate.toFixed(2)} percent`}>
+      <svg viewBox="0 0 180 106" className="w-full max-w-[210px]" role="img" aria-label={`Win rate ${winRate.toFixed(2)} percent`}>
         <defs>
           <linearGradient id="winRateProfitGrad" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stopColor="var(--profit)" />

@@ -7,7 +7,7 @@ import { Sparkline } from "@/components/dashboard/sparkline";
 import { formatCurrency } from "@/lib/metrics";
 import type { StreakInfo, TradeStats } from "@/lib/metrics";
 
-const valueClass = "text-[26px] font-semibold leading-none tracking-tight";
+const valueClass = "text-[22px] font-semibold leading-none tracking-tight";
 const subClass = "mt-1.5 text-xs text-[var(--text-muted)]";
 
 function signedCurrency(value: number) {
@@ -38,7 +38,7 @@ export function StatsGrid({
   const trueTotalFees = totalFees ?? stats.totalFees;
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:grid-rows-2">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 xl:grid-rows-2">
       <StatCard
         label="Trade win"
         icon={Percent}

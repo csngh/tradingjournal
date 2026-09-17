@@ -19,7 +19,7 @@ export function StatCard({
 }) {
   return (
     <div
-      className={`flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 ${className}`}
+      className={`flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3.5 ${className}`}
     >
       <div className="flex items-start justify-between gap-2">
         <span className="flex items-center gap-1.5 text-[15px] font-medium text-[var(--text-muted)]">
