@@ -224,8 +224,8 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
         />
       </div>
 
-      <div className="flex flex-col gap-3 md:min-h-0 md:flex-1 xl:flex-row">
-        <div className="flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 md:min-h-0 md:flex-1 xl:basis-2/3">
+      <div className="flex flex-col gap-3 md:min-h-0 md:flex-1 lg:flex-row">
+        <div className="flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 md:min-h-[300px] md:flex-1 lg:basis-2/3">
           <div className="mb-1 flex shrink-0 items-center justify-between">
             <h2 className="flex items-center gap-2 text-[17px] font-semibold text-[var(--text)]">
               <LineChart size={17} className="text-[var(--accent)]" />
@@ -237,7 +237,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
             </Badge>
           </div>
           {equityValues.length > 1 ? (
-            <div className="h-[280px] md:h-auto md:min-h-0 md:flex-1">
+            <div className="h-[280px] md:h-auto md:min-h-[220px] md:flex-1">
               <EquityChart
                 data={equitySeries.map((p, i) => ({ index: i, date: p.date, balance: p.balance }))}
                 drawdownThreshold={singleAccount && drawdown?.enabled ? drawdown.threshold : null}
@@ -250,7 +250,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
             </p>
           )}
         </div>
-        <div className="h-[420px] md:h-auto md:min-h-0 md:flex-1 xl:basis-1/3">
+        <div className="h-[420px] md:h-auto md:min-h-[300px] md:flex-1 lg:basis-1/3">
           <TradesPanel trades={trades} timeZone={timeZone} />
         </div>
       </div>

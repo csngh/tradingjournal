@@ -21,8 +21,8 @@ export function StatCard({
     <div
       className={`flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3.5 ${className}`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <span className="flex items-center gap-1.5 text-[15px] font-medium text-[var(--text-muted)]">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-1.5 text-[15px] font-medium text-[var(--text-muted)]">
           {Icon && <Icon size={14} className="text-[var(--accent)]" />}
           {label}
           <Tooltip content={hint}>

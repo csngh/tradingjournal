@@ -41,12 +41,12 @@ export function StatsGrid({
   const trueScratches = scratches ?? stats.scratches;
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 xl:grid-rows-2">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2">
       <StatCard
         label="Trade win"
         icon={Percent}
         hint="Share of closed trades that finished profitable, with the win / breakeven / loss counts."
-        className="xl:row-span-2"
+        className="lg:row-span-2"
       >
         <WinRateGauge
           wins={stats.wins}

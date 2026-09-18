@@ -208,7 +208,7 @@ export function CalendarClient({
 
         <div className="flex min-h-0 flex-1 gap-4 md:gap-6">
           <div
-            className="grid min-h-0 flex-1 grid-cols-7 gap-1.5 md:gap-2"
+            className="@container grid min-h-0 flex-1 grid-cols-7 gap-1.5 md:gap-2"
             style={{
               gridTemplateRows: fillHeight
                 ? `repeat(${weeks.length}, minmax(0, 1fr))`
@@ -229,7 +229,7 @@ export function CalendarClient({
                     <button
                       key={key}
                       onClick={() => (hasTrades ? setSelectedDay(key) : openAddForDay(key))}
-                      className={`flex min-h-0 flex-col items-start rounded-xl border p-1 text-left transition sm:p-2 xl:p-2.5 ${
+                      className={`flex min-h-0 flex-col items-start overflow-hidden rounded-xl border p-1 text-left transition sm:p-2 xl:p-2.5 ${
                         inMonth ? "border-[var(--border)]" : "border-transparent opacity-40"
                       } cursor-pointer hover:border-[var(--accent)]`}
                       style={{
@@ -249,7 +249,9 @@ export function CalendarClient({
                         <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-0.5 text-center">
                           <div
                             className={`w-full truncate font-bold leading-tight tabular tracking-tight ${
-                              fillHeight ? "text-[10px] sm:text-base md:text-lg xl:text-xl" : "text-[10px] 2xl:text-base"
+                              fillHeight
+                                ? "text-[10px] @xl:text-xs @3xl:text-sm @5xl:text-base"
+                                : "text-[10px] 2xl:text-base"
                             } ${
                               pnl >= 0 ? "text-[var(--profit)]" : "text-[var(--loss)]"
                             }`}
@@ -279,7 +281,7 @@ export function CalendarClient({
               return (
                 <div
                   key={weekIndex}
-                  className="flex min-h-0 flex-1 flex-col items-start rounded-xl border border-[var(--border)] p-2.5"
+                  className="flex min-h-0 flex-1 flex-col items-start overflow-hidden rounded-xl border border-[var(--border)] p-2.5"
                   style={{
                     minHeight: fillHeight ? 0 : 70,
                     background:
@@ -294,7 +296,7 @@ export function CalendarClient({
                   <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-0.5 text-center">
                     <div
                       className={`w-full truncate font-bold leading-tight tabular ${
-                        fillHeight ? "text-2xl" : "text-sm 2xl:text-base"
+                        fillHeight ? "text-xs sm:text-sm md:text-base xl:text-lg" : "text-sm 2xl:text-base"
                       } ${
                         weekTrades.length === 0
                           ? "text-[var(--text-faint)]"

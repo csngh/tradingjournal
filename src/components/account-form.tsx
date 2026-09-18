@@ -40,14 +40,11 @@ export function AccountForm({
   const [highestBalance, setHighestBalance] = useState(
     account?.highestBalance != null ? String(account.highestBalance) : ""
   );
-  const [feePerContract, setFeePerContract] = useState(
-    account?.feePerContract != null ? String(account.feePerContract) : ""
-  );
   const [trailingDrawdown, setTrailingDrawdown] = useState(
     account?.trailingDrawdown != null ? String(account.trailingDrawdown) : ""
   );
   const [drawdownLockEnabled, setDrawdownLockEnabled] = useState(
-    account?.drawdownLockEnabled ?? true
+    account?.drawdownLockEnabled ?? false
   );
   const [drawdownStopsAt, setDrawdownStopsAt] = useState(
     account?.drawdownStopsAt != null ? String(account.drawdownStopsAt) : ""
@@ -75,7 +72,8 @@ export function AccountForm({
       startingBalance: startingBalanceNum,
       balanceAdjustment,
       highestBalance: highestBalance ? Number(highestBalance) : null,
-      feePerContract: feePerContract ? Number(feePerContract) : null,
+      // No longer editable from this form; preserve whatever the account already has.
+      feePerContract: account?.feePerContract ?? null,
       trailingDrawdown: trailingDrawdown ? Number(trailingDrawdown) : null,
       drawdownLockEnabled,
       drawdownStopsAt: drawdownStopsAt ? Number(drawdownStopsAt) : null,
@@ -237,32 +235,19 @@ export function AccountForm({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelClass}>Fee per contract ($)</label>
-            <input
-              type="number"
-              step="0.01"
-              className={inputClass}
-              value={feePerContract}
-              onChange={(e) => setFeePerContract(e.target.value)}
-              placeholder="Round-trip commission, e.g. 4.50"
-            />
-          </div>
-          <div>
-            <label className={labelClass}>Highest balance reached</label>
-            <input
-              type="number"
-              step="0.01"
-              className={inputClass}
-              value={highestBalance}
-              onChange={(e) => setHighestBalance(e.target.value)}
-              placeholder="Defaults to current balance"
-            />
-            <p className="mt-1 text-[11px] text-[var(--text-muted)]">
-              Seeds the trailing-drawdown peak; it keeps rising automatically as you set new highs.
-            </p>
-          </div>
+        <div>
+          <label className={labelClass}>Highest balance reached</label>
+          <input
+            type="number"
+            step="0.01"
+            className={inputClass}
+            value={highestBalance}
+            onChange={(e) => setHighestBalance(e.target.value)}
+            placeholder="Defaults to current balance"
+          />
+          <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+            Seeds the trailing-drawdown peak; it keeps rising automatically as you set new highs.
+          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">

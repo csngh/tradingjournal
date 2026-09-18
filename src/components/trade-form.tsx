@@ -251,11 +251,15 @@ export function TradeForm({
               required
               type="number"
               step="0.01"
-              className={inputClass}
+              className={`${inputClass} disabled:cursor-not-allowed disabled:opacity-50`}
               value={pointValue}
-              onChange={(e) => setPointValue(e.target.value)}
+              disabled
+              readOnly
               placeholder="Auto-fills from symbol"
             />
+            <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+              Set automatically from the symbol above.
+            </p>
           </div>
         </div>
 
