@@ -351,7 +351,7 @@ export function CalendarClient({
                       <span
                         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
                           t.isBreakeven
-                            ? "bg-[var(--surface-2)] text-[var(--text-faint)]"
+                            ? "[background-image:var(--gradient-accent-soft)] text-[var(--accent)]"
                             : net >= 0
                               ? "[background-image:var(--gradient-profit-soft)] text-[var(--profit)]"
                               : "[background-image:var(--gradient-loss-soft)] text-[var(--loss)]"
@@ -369,7 +369,7 @@ export function CalendarClient({
                         <div className="flex items-center gap-2 text-sm font-medium text-[var(--text)]">
                           {t.symbol}
                           <Badge tone={t.side === "LONG" ? "profit" : "loss"}>{t.side}</Badge>
-                          {t.isBreakeven && <Badge tone="neutral">BE</Badge>}
+                          {t.isBreakeven && <Badge tone="accent">BE</Badge>}
                         </div>
                         <div className="truncate text-xs text-[var(--text-muted)]">
                           {account?.name} · {t.contracts} contract{t.contracts > 1 ? "s" : ""}

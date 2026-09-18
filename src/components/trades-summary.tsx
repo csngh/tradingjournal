@@ -1,16 +1,16 @@
 import { formatCurrency } from "@/lib/metrics";
 import type { TradeStats } from "@/lib/metrics";
 
-function toneClass(tone: "profit" | "loss" | "neutral" | "text") {
+function toneClass(tone: "profit" | "loss" | "gold" | "text") {
   return {
     profit: "text-[var(--profit)]",
     loss: "text-[var(--loss)]",
-    neutral: "text-[var(--text-faint)]",
+    gold: "text-[var(--accent)]",
     text: "text-[var(--text)]",
   }[tone];
 }
 
-function Stat({ label, value, tone = "text" }: { label: string; value: string; tone?: "profit" | "loss" | "neutral" | "text" }) {
+function Stat({ label, value, tone = "text" }: { label: string; value: string; tone?: "profit" | "loss" | "gold" | "text" }) {
   return (
     <div className="flex flex-col gap-1">
       <span className="text-[11px] font-medium text-[var(--text-muted)]">{label}</span>
@@ -43,7 +43,7 @@ export function TradesSummary({
       <Stat label="Total trades" value={String(trueTotalTrades)} />
       <Stat label="Wins" value={String(stats.wins)} tone="profit" />
       <Stat label="Losses" value={String(stats.losses)} tone="loss" />
-      <Stat label="Breakevens" value={String(trueScratches)} tone="neutral" />
+      <Stat label="Breakevens" value={String(trueScratches)} tone="gold" />
       <Stat label="Win rate" value={hasTrades ? `${stats.winRate.toFixed(2)}%` : "—"} />
       <Stat
         label="Net P&L"

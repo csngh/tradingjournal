@@ -217,7 +217,7 @@ export function TradesClient({
                       <td className="px-4 py-3">
                         <span className="flex items-center gap-1.5">
                           <Badge tone={t.side === "LONG" ? "profit" : "loss"}>{t.side}</Badge>
-                          {t.isBreakeven && <Badge tone="neutral">BE</Badge>}
+                          {t.isBreakeven && <Badge tone="accent">BE</Badge>}
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3">

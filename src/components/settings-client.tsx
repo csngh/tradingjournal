@@ -6,6 +6,7 @@ import { updateTimezone, updateCountBreakeven } from "@/app/actions";
 import { inputClass, labelClass, primaryButtonClass } from "@/components/ui/form";
 import { TagsManager } from "@/components/tags-manager";
 import { DataManager } from "@/components/data-manager";
+import { DangerZone } from "@/components/danger-zone";
 import type { TimezoneOption } from "@/lib/timezone";
 import type { Tag } from "@/db/schema";
 
@@ -164,6 +165,10 @@ export function SettingsClient({
 
       <TagsManager tags={tags} />
       <DataManager />
+
+      <div className="lg:col-span-2">
+        <DangerZone />
+      </div>
     </div>
   );
 }

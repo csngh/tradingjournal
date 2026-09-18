@@ -402,3 +402,24 @@ export async function importAllData(input: unknown): Promise<ImportResult> {
   revalidatePath("/settings");
   return { ok: true };
 }
+
+/**
+ * Wipes every account, trade, tag, and saved setting, leaving a completely empty database (the
+ * next read of app settings recreates a default row). This is strictly local to this device's
+ * SQLite file; it can't reach browser storage or Electron/Chromium's own caches, so the client
+ * is responsible for clearing localStorage and reloading after this resolves.
+ */
+export async function resetAllData() {
+  db.transaction((tx) => {
+    tx.delete(trades).run();
+    tx.delete(tags).run();
+    tx.delete(accounts).run();
+    tx.delete(appSettings).run();
+  });
+
+  revalidatePath("/");
+  revalidatePath("/calendar");
+  revalidatePath("/trades");
+  revalidatePath("/accounts");
+  revalidatePath("/settings");
+}

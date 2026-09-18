@@ -52,7 +52,7 @@ export function TradeDetailModal({
           <span className="flex items-center gap-1.5">
             <Badge tone={trade.side === "LONG" ? "profit" : "loss"}>{trade.side}</Badge>
             {trade.isBreakeven && (
-              <Badge tone="neutral">
+              <Badge tone="accent">
                 BE{trade.beOutcome ? ` · ${trade.beOutcome}` : ""}
               </Badge>
             )}

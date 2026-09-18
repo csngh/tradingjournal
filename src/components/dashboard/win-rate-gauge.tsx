@@ -36,7 +36,7 @@ export function WinRateGauge({
     ? (
       [
         { share: wins / total, color: "url(#winRateProfitGrad)" },
-        { share: scratches / total, color: "var(--text-faint)" },
+        { share: scratches / total, color: "url(#winRateGoldGrad)" },
         { share: losses / total, color: "url(#winRateLossGrad)" },
       ] as Segment[]
     ).filter((s) => s.share > 0)
@@ -68,6 +68,10 @@ export function WinRateGauge({
             <stop offset="0%" stopColor="var(--loss)" />
             <stop offset="100%" stopColor="var(--loss-2)" />
           </linearGradient>
+          <linearGradient id="winRateGoldGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="var(--accent)" />
+            <stop offset="100%" stopColor="var(--accent-2)" />
+          </linearGradient>
         </defs>
         <path d={arc(180, 0)} fill="none" stroke="var(--surface-2)" strokeWidth={STROKE} strokeLinecap="round" />
         {paths.map((p, i) => (
@@ -95,7 +99,7 @@ export function WinRateGauge({
 
       <div className="mt-1 flex w-full items-center justify-between px-1">
         <Count value={wins} label="W" color="var(--profit)" background="var(--gradient-profit-soft)" />
-        <Count value={scratches} label="BE" color="var(--text-faint)" background="var(--surface-2)" />
+        <Count value={scratches} label="BE" color="var(--accent)" background="var(--gradient-accent-soft)" />
         <Count value={losses} label="L" color="var(--loss)" background="var(--gradient-loss-soft)" />
       </div>
     </div>
