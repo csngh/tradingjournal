@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
-import { LayoutDashboard, CalendarDays, ListOrdered, Wallet, LineChart, Settings, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, CalendarDays, ListOrdered, Wallet, Settings, ShieldCheck } from "lucide-react";
 
 const links = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -20,8 +21,8 @@ export function Sidebar() {
   return (
     <aside className="hidden md:flex md:w-60 md:flex-col md:border-r md:border-[var(--border)] md:bg-[var(--bg-elevated)]">
       <div className="flex items-center gap-2.5 px-6 py-6">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg [background-image:var(--gradient-accent)] text-white">
-          <LineChart size={16} />
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-black">
+          <Image src="/logo.png" alt="Gringotts Trading Journal" width={32} height={32} className="h-full w-full object-cover" />
         </div>
         <span className="min-w-0 flex-1 text-[13px] font-semibold leading-tight tracking-tight text-[var(--text)]">
           Gringotts Trading Journal
