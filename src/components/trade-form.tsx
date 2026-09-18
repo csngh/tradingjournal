@@ -37,12 +37,12 @@ export function TradeForm({
   const [accountId, setAccountId] = useState(trade?.accountId ?? defaultAccountId ?? accounts[0]?.id ?? "");
   const [symbol, setSymbol] = useState(trade?.symbol ?? "");
   const [side, setSide] = useState<TradeInput["side"]>(trade?.side ?? "LONG");
-  const [timeframe, setTimeframe] = useState(trade?.timeframe ?? "5m");
+  const [timeframe, setTimeframe] = useState(trade?.timeframe ?? "3m");
   const [contracts, setContracts] = useState(String(trade?.contracts ?? 1));
   const [entryTime, setEntryTime] = useState(
     trade
       ? zonedWallClock(trade.entryTime, timeZone)
-      : bucketToCandleClose(defaultTime, minutesForTimeframe("5m"))
+      : bucketToCandleClose(defaultTime, minutesForTimeframe("3m"))
   );
   const [points, setPoints] = useState(String(trade?.points ?? ""));
   const [pointValue, setPointValue] = useState(
