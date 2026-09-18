@@ -2,7 +2,7 @@
 // project's own node_modules out of app.asar) also strip node_modules from
 // its `extraResources` copy step, since both share the same ignore list. So
 // instead we let electron-builder produce an empty app shell, then copy the
-// standalone Next.js server in ourselves — a plain fs copy, no matcher magic.
+// standalone Next.js server in ourselves with a plain fs copy, no matcher magic.
 import { existsSync, cpSync, readdirSync } from "node:fs";
 import path from "node:path";
 
@@ -11,7 +11,7 @@ const standaloneDir = path.join(root, ".next", "standalone");
 const releaseDir = path.join(root, "release");
 
 if (!existsSync(standaloneDir)) {
-  throw new Error("Missing .next/standalone — run `npm run build:electron` first.");
+  throw new Error("Missing .next/standalone. Run `npm run build:electron` first.");
 }
 
 const archDir = readdirSync(releaseDir).find((f) => f.startsWith("mac"));

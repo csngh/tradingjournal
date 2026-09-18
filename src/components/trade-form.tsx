@@ -9,12 +9,13 @@ import { FUTURES_SYMBOLS, findFuturesSymbol } from "@/lib/futures-symbols";
 import { TIMEFRAMES, minutesForTimeframe, bucketToCandleClose } from "@/lib/timeframes";
 import { formatCurrency } from "@/lib/metrics";
 import { wallClockToUtcIso, zonedWallClock } from "@/lib/timezone";
-import type { Account, Trade } from "@/db/schema";
+import type { Account, Tag, Trade } from "@/db/schema";
 
 export function TradeForm({
   open,
   onClose,
   accounts,
+  tags,
   trade,
   timeZone,
   defaultAccountId,
@@ -23,6 +24,7 @@ export function TradeForm({
   open: boolean;
   onClose: () => void;
   accounts: Account[];
+  tags: Tag[];
   trade?: Trade | null;
   timeZone: string;
   defaultAccountId?: string;
@@ -49,7 +51,7 @@ export function TradeForm({
   const [fees, setFees] = useState(String(trade?.fees ?? 0));
   const [isBreakeven, setIsBreakeven] = useState(trade?.isBreakeven ?? false);
   const [beOutcome, setBeOutcome] = useState<"" | "WIN" | "LOSS">(trade?.beOutcome ?? "");
-  const [tags, setTags] = useState(trade?.tags ?? "");
+  const [tagId, setTagId] = useState(trade?.tagId ?? "");
   const [notes, setNotes] = useState(trade?.notes ?? "");
   const [submitting, setSubmitting] = useState(false);
 
@@ -107,7 +109,7 @@ export function TradeForm({
       pnl: grossPnl,
       isBreakeven,
       beOutcome: isBreakeven && beOutcome ? beOutcome : null,
-      tags: tags || null,
+      tagId: tagId || null,
       notes: notes || null,
     };
     try {
@@ -147,7 +149,7 @@ export function TradeForm({
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
-                {a.role === "MASTER" ? " (master — copies to followers)" : ""}
+                {a.role === "MASTER" ? " (master, copies to followers)" : ""}
               </option>
             ))}
           </select>
@@ -239,7 +241,7 @@ export function TradeForm({
             />
             {isBreakeven && (
               <p className="mt-1 text-[11px] text-[var(--text-muted)]">
-                Locked to 0 — breakeven trades don&apos;t move points.
+                Locked to 0 because breakeven trades don&apos;t move points.
               </p>
             )}
           </div>
@@ -304,7 +306,7 @@ export function TradeForm({
             Mark as breakeven (BE)
           </label>
           <p className="mt-1 pl-6 text-[11px] text-[var(--text-muted)]">
-            Counts as a scratch, not a win or loss — even if fees push the net P&amp;L slightly
+            Counts as a scratch, not a win or loss, even if fees push the net P&amp;L slightly
             off zero.
           </p>
 
@@ -321,20 +323,31 @@ export function TradeForm({
                 <option value="LOSS">Ultimately a loss</option>
               </select>
               <p className="mt-1 text-[11px] text-[var(--text-muted)]">
-                Doesn&apos;t affect dashboard metrics — just tagged for your own analytics later.
+                Doesn&apos;t affect dashboard metrics. Just tagged for your own analytics later.
               </p>
             </div>
           )}
         </div>
 
         <div>
-          <label className={labelClass}>Tags</label>
-          <input
+          <label className={labelClass}>Tag</label>
+          <select
             className={inputClass}
-            value={tags ?? ""}
-            onChange={(e) => setTags(e.target.value)}
-            placeholder="breakout, A+ setup, revenge trade…"
-          />
+            value={tagId}
+            onChange={(e) => setTagId(e.target.value)}
+          >
+            <option value="">No tag</option>
+            {tags.map((t) => (
+              <option key={t.id} value={t.id} style={{ color: t.color }}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          {tags.length === 0 && (
+            <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+              No tags yet. Add some in Settings.
+            </p>
+          )}
         </div>
 
         <div>

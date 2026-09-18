@@ -29,7 +29,7 @@ export function StatsGrid({
   stats: TradeStats;
   dayStreaks: StreakInfo;
   equityValues: number[];
-  /** True net P&L / fees / breakeven count across every trade, unaffected by the count/exclude-breakeven setting — defaults to `stats` if omitted. */
+  /** True net P&L / fees / breakeven count across every trade, unaffected by the count/exclude-breakeven setting. Defaults to `stats` if omitted. */
   netPnl?: number;
   totalFees?: number;
   scratches?: number;
@@ -59,7 +59,7 @@ export function StatsGrid({
       <StatCard
         label="Profit factor"
         icon={Scale}
-        hint="Gross profit divided by gross loss. Above 1.00 means you earn more than you give back — the ring's halfway mark is that breakeven point."
+        hint="Gross profit divided by gross loss. Above 1.00 means you earn more than you give back. The ring's halfway mark is that breakeven point."
       >
         <div className="flex items-center justify-between gap-3">
           <div>

@@ -2,7 +2,7 @@ const W = 96;
 const H = 38;
 const PAD = 3;
 
-/** Compact trend line for a stat tile — no axes, the tile's value is the label. */
+/** Compact trend line for a stat tile. No axes; the tile's value is the label. */
 export function Sparkline({ values, tone }: { values: number[]; tone: "profit" | "loss" }) {
   if (values.length < 2) {
     return (
@@ -47,7 +47,17 @@ export function Sparkline({ values, tone }: { values: number[]; tone: "profit" |
           <stop offset="100%" stopColor="var(--loss-2)" />
         </linearGradient>
       </defs>
-      <path d={d} fill="none" stroke={`url(#${gradId})`} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d={d}
+        fill="none"
+        stroke={`url(#${gradId})`}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        pathLength={1}
+        className="animate-stroke-draw"
+        style={{ strokeDasharray: 1, strokeDashoffset: 1 }}
+      />
     </svg>
   );
 }

@@ -6,7 +6,7 @@ export function SplitBar({ left, right }: { left: number; right: number }) {
   return (
     <div className="flex h-2 w-full items-stretch gap-[2px] overflow-hidden">
       <div
-        className="rounded-full"
+        className="animate-bar-grow rounded-full"
         style={{ width: `${leftShare}%`, background: "var(--gradient-profit)" }}
       />
       <div className="flex-1 rounded-full" style={{ background: "var(--gradient-loss)" }} />

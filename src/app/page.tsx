@@ -246,7 +246,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
             </div>
           ) : (
             <p className="flex h-[280px] items-center justify-center text-center text-sm text-[var(--text-muted)] md:h-auto md:flex-1">
-              No trades yet — log a trade to see your equity curve.
+              No trades yet. Log a trade to see your equity curve.
             </p>
           )}
         </div>

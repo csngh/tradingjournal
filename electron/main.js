@@ -5,7 +5,7 @@ const http = require("node:http");
 
 const APP_NAME = "Gringotts Trading Journal";
 app.setName(APP_NAME);
-// Decoupled from the display name on purpose — a future rename must never
+// Decoupled from the display name on purpose. A future rename must never
 // move or orphan the user's existing database.
 app.setPath("userData", path.join(app.getPath("appData"), "GringottsTradingJournal"));
 
@@ -64,8 +64,8 @@ async function startServer() {
   await waitForServer(port);
   // Next.js sets process.title to "next-server (vX.Y.Z)" as a side effect of
   // starting its server. Since we run it in-process rather than spawning it,
-  // that overwrites what macOS shows as the app's name in the menu bar —
-  // reset it back now that Next has finished its own startup.
+  // that overwrites what macOS shows as the app's name in the menu bar.
+  // Reset it back now that Next has finished its own startup.
   process.title = APP_NAME;
   return port;
 }

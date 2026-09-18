@@ -4,16 +4,21 @@ import { useMemo, useState } from "react";
 import { Check, Clock, Globe, Scale } from "lucide-react";
 import { updateTimezone, updateCountBreakeven } from "@/app/actions";
 import { inputClass, labelClass, primaryButtonClass } from "@/components/ui/form";
+import { TagsManager } from "@/components/tags-manager";
+import { DataManager } from "@/components/data-manager";
 import type { TimezoneOption } from "@/lib/timezone";
+import type { Tag } from "@/db/schema";
 
 export function SettingsClient({
   currentTimezone,
   timezones,
   currentCountBreakeven,
+  tags,
 }: {
   currentTimezone: string;
   timezones: TimezoneOption[];
   currentCountBreakeven: boolean;
+  tags: Tag[];
 }) {
   const [timezone, setTimezone] = useState(currentTimezone);
   const [saving, setSaving] = useState(false);
@@ -62,19 +67,18 @@ export function SettingsClient({
   }
 
   return (
-    <div className="flex max-w-xl flex-col gap-4">
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+    <div className="grid max-w-6xl grid-cols-1 gap-2.5 lg:grid-cols-2">
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
         <h2 className="flex items-center gap-2 text-[17px] font-semibold text-[var(--text)]">
           <Globe size={17} className="text-[var(--accent)]" />
           Timezone
         </h2>
         <p className="mt-1 text-sm text-[var(--text-muted)]">
-          Controls which calendar day your trades are grouped under, the entry times you type
-          into the trade form, and every date shown across the journal — independent of whatever
-          timezone this browser or computer happens to be set to.
+          Controls which calendar day trades are grouped under and every date shown across the
+          journal, independent of this browser or computer&apos;s own timezone.
         </p>
 
-        <div className="mt-4">
+        <div className="mt-3">
           <label className={labelClass}>Timezone</label>
           <select
             className={inputClass}
@@ -97,7 +101,7 @@ export function SettingsClient({
           Right now it&apos;s <span className="font-medium text-[var(--text)]">{preview}</span> there.
         </div>
 
-        <div className="mt-4 flex items-center gap-3">
+        <div className="mt-3 flex items-center gap-3">
           <button
             onClick={handleSave}
             disabled={saving || !dirty}
@@ -114,19 +118,18 @@ export function SettingsClient({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
         <h2 className="flex items-center gap-2 text-[17px] font-semibold text-[var(--text)]">
           <Scale size={17} className="text-[var(--accent)]" />
           Breakeven trades
         </h2>
         <p className="mt-1 text-sm text-[var(--text-muted)]">
-          Controls whether trades logged as breakeven count toward the dashboard&apos;s trade-quality
-          metrics — trade win %, profit factor, expectancy, avg win/loss, and streaks. Net P&amp;L,
-          account balance, the equity curve, and the calendar always reflect every trade&apos;s real
-          dollar result regardless of this setting.
+          Controls whether breakeven trades count toward trade-quality metrics like win rate and
+          profit factor. Net P&amp;L and account balance always reflect the real dollar result
+          regardless of this setting.
         </p>
 
-        <div className="mt-4 flex gap-1 rounded-xl bg-[var(--surface-2)] p-1">
+        <div className="mt-3 flex gap-1 rounded-xl bg-[var(--surface-2)] p-1">
           <button
             type="button"
             onClick={() => handleCountBreakevenChange(true)}
@@ -154,10 +157,13 @@ export function SettingsClient({
         </div>
         <p className="mt-2 text-[11px] text-[var(--text-muted)]">
           {countBreakeven
-            ? "Breakeven trades are included as scratches — they count toward total trades but not wins or losses."
+            ? "Breakeven trades are included as scratches. They count toward total trades but not wins or losses."
             : "Breakeven trades are left out of dashboard metrics entirely, as if they were never logged."}
         </p>
       </div>
+
+      <TagsManager tags={tags} />
+      <DataManager />
     </div>
   );
 }

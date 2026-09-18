@@ -26,7 +26,7 @@ export function TradesSummary({
   scratches,
 }: {
   stats: TradeStats;
-  /** True net P&L / total trades / breakeven count across every filtered trade, unaffected by the count/exclude-breakeven setting — each defaults to the matching `stats` field if omitted. */
+  /** True net P&L / total trades / breakeven count across every filtered trade, unaffected by the count/exclude-breakeven setting. Each defaults to the matching `stats` field if omitted. */
   netPnl?: number;
   totalTrades?: number;
   scratches?: number;

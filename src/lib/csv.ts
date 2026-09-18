@@ -1,19 +1,25 @@
-import type { Account, Trade } from "@/db/schema";
+import type { Account, Tag, Trade } from "@/db/schema";
 import { netPnl } from "@/lib/metrics";
-import { zonedDayKey } from "@/lib/timezone";
+import { formatZonedDate, formatZonedTime } from "@/lib/timezone";
 
 function csvCell(value: string | number): string {
   const s = String(value);
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
+/** Plain 2-decimal numeric string (not currency-formatted) so Excel reads it as a number. */
+function money(value: number): string {
+  return value.toFixed(2);
+}
+
 const HEADERS = [
-  "Date",
   "Account",
   "Symbol",
   "Side",
   "Timeframe",
   "Contracts",
+  "Entry Date",
+  "Entry Time",
   "Points",
   "Point Value",
   "Fees",
@@ -21,29 +27,32 @@ const HEADERS = [
   "Net P&L",
   "Breakeven",
   "BE Outcome",
-  "Tags",
+  "Tag",
   "Notes",
 ];
 
-export function tradesToCsv(trades: Trade[], accounts: Account[], timeZone: string): string {
+export function tradesToCsv(trades: Trade[], accounts: Account[], tags: Tag[], timeZone: string): string {
   const accountById = new Map(accounts.map((a) => [a.id, a]));
+  const tagById = new Map(tags.map((t) => [t.id, t]));
   const rows = trades.map((t) => {
     const account = accountById.get(t.accountId);
+    const tag = t.tagId ? tagById.get(t.tagId) : undefined;
     return [
-      zonedDayKey(t.exitTime, timeZone),
       account?.name ?? "",
       t.symbol,
       t.side,
       t.timeframe,
       t.contracts,
+      formatZonedDate(t.entryTime, timeZone),
+      formatZonedTime(t.entryTime, timeZone),
       t.points,
       t.pointValue,
-      t.fees,
-      t.pnl,
-      netPnl(t),
+      money(t.fees),
+      money(t.pnl),
+      money(netPnl(t)),
       t.isBreakeven ? "Yes" : "No",
       t.beOutcome ?? "",
-      t.tags ?? "",
+      tag?.name ?? "",
       t.notes ?? "",
     ];
   });

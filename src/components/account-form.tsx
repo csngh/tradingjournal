@@ -231,7 +231,7 @@ export function AccountForm({
               onChange={(e) => setCurrentBalance(e.target.value)}
             />
             <p className="mt-1 text-[11px] text-[var(--text-muted)]">
-              Adding an account mid-journey? Set what it&apos;s worth right now — no need to
+              Adding an account mid-journey? Set what it&apos;s worth right now, no need to
               log every past trade.
             </p>
           </div>

@@ -1,5 +1,5 @@
 /**
- * Timezone-aware date helpers built on native Intl — no extra dependency.
+ * Timezone-aware date helpers built on native Intl. No extra dependency needed.
  *
  * Trade timestamps are stored as UTC ISO strings. Every place that needs to
  * know "what calendar day/wall-clock time is this" for a trader should go
@@ -138,7 +138,7 @@ export function zonedWallClock(isoString: string, timeZone: string): string {
  * the rare remaining edge case).
  */
 export function wallClockToUtcIso(wallClock: string, timeZone: string): string {
-  // The target wall-clock time, pretended to be UTC — our fixed reference point.
+  // The target wall-clock time, pretended to be UTC. This is our fixed reference point.
   const targetAsUtcMs = new Date(`${wallClock}:00.000Z`).getTime();
   let guessMs = targetAsUtcMs;
 
@@ -163,5 +163,26 @@ export function formatZonedDate(isoString: string, timeZone: string): string {
     month: "short",
     day: "numeric",
     year: "numeric",
+  }).format(new Date(isoString));
+}
+
+/** "Sep 16, 2026, 1:10 PM" style display, in the given timezone. */
+export function formatZonedDateTime(isoString: string, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(isoString));
+}
+
+/** "1:10 PM" style display, in the given timezone. */
+export function formatZonedTime(isoString: string, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "numeric",
+    minute: "2-digit",
   }).format(new Date(isoString));
 }

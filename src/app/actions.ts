@@ -3,9 +3,10 @@
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { accounts, appSettings, trades } from "@/db/schema";
+import { accounts, appSettings, tags, trades } from "@/db/schema";
 import { eq, and, ne } from "drizzle-orm";
-import { getAllAccounts, getFollowers } from "@/lib/data";
+import { getAllAccounts, getAllTags, getFollowers } from "@/lib/data";
+import { validateBackup, type BackupData } from "@/lib/backup";
 
 // ---------- Settings ----------
 
@@ -35,6 +36,53 @@ export async function updateCountBreakeven(countBreakeven: boolean) {
 
   revalidatePath("/");
   revalidatePath("/settings");
+}
+
+// ---------- Tags ----------
+
+export type TagInput = {
+  name: string;
+  color: string;
+};
+
+function revalidateTradePages() {
+  revalidatePath("/");
+  revalidatePath("/calendar");
+  revalidatePath("/trades");
+  revalidatePath("/settings");
+}
+
+export async function createTag(input: TagInput) {
+  const id = randomUUID();
+  const all = await getAllTags();
+  const maxSort = all.reduce((m, t) => Math.max(m, t.sortOrder), -1);
+
+  await db.insert(tags).values({
+    id,
+    name: input.name,
+    color: input.color,
+    sortOrder: maxSort + 1,
+  });
+
+  revalidateTradePages();
+  return id;
+}
+
+export async function updateTag(id: string, input: TagInput) {
+  await db
+    .update(tags)
+    .set({ name: input.name, color: input.color })
+    .where(eq(tags.id, id));
+
+  revalidateTradePages();
+}
+
+export async function deleteTag(id: string) {
+  // The tag_id column was added via a later migration (SQLite's ALTER TABLE ADD COLUMN doesn't
+  // carry an ON DELETE action), so the FK alone won't null this out. Do it explicitly first.
+  await db.update(trades).set({ tagId: null }).where(eq(trades.tagId, id));
+  await db.delete(tags).where(eq(tags.id, id));
+  revalidateTradePages();
 }
 
 // ---------- Accounts ----------
@@ -135,7 +183,7 @@ export type TradeInput = {
   pnl: number;
   isBreakeven: boolean;
   beOutcome?: "WIN" | "LOSS" | null;
-  tags?: string | null;
+  tagId?: string | null;
   notes?: string | null;
 };
 
@@ -169,7 +217,7 @@ async function propagateToFollowers(
       pnl: perContractPnl * scaledContracts,
       isBreakeven: base.isBreakeven,
       beOutcome: base.beOutcome ?? null,
-      tags: base.tags ?? null,
+      tagId: base.tagId ?? null,
       notes: base.notes ?? null,
     };
   });
@@ -197,7 +245,7 @@ export async function createTrade(input: TradeInput) {
     pnl: input.pnl,
     isBreakeven: input.isBreakeven,
     beOutcome: input.beOutcome ?? null,
-    tags: input.tags ?? null,
+    tagId: input.tagId ?? null,
     notes: input.notes ?? null,
   });
 
@@ -236,7 +284,7 @@ export async function updateTrade(id: string, input: TradeInput) {
       pnl: input.pnl,
       isBreakeven: input.isBreakeven,
       beOutcome: input.beOutcome ?? null,
-      tags: input.tags ?? null,
+      tagId: input.tagId ?? null,
       notes: input.notes ?? null,
       updatedAt: new Date().toISOString(),
     })
@@ -283,4 +331,74 @@ export async function deleteTrade(id: string) {
   revalidatePath("/");
   revalidatePath("/calendar");
   revalidatePath("/trades");
+}
+
+// ---------- Full data export / import ----------
+
+const BACKUP_FORMAT_VERSION = 1;
+
+export type { BackupData } from "@/lib/backup";
+
+export async function exportAllData(): Promise<BackupData> {
+  const [accountRows, tagRows, tradeRows, settingsRows] = await Promise.all([
+    db.select().from(accounts),
+    db.select().from(tags),
+    db.select().from(trades),
+    db.select().from(appSettings).where(eq(appSettings.id, 1)),
+  ]);
+
+  return {
+    formatVersion: BACKUP_FORMAT_VERSION,
+    exportedAt: new Date().toISOString(),
+    appSettings: settingsRows[0] ?? null,
+    accounts: accountRows,
+    tags: tagRows,
+    trades: tradeRows,
+  };
+}
+
+export type ImportResult = { ok: true } | { ok: false; errors: string[] };
+
+/**
+ * Replaces every account, tag, trade, and the saved settings with the contents of a previously
+ * exported backup. `validateBackup` checks required fields, enum values, and cross-references
+ * (trade -> account, trade -> tag, account -> master account) before anything is written. The
+ * write itself is wrapped in a single SQLite transaction (better-sqlite3 transactions must run
+ * fully synchronously, hence `.run()` instead of `await` on each statement) so even a problem
+ * validation missed rolls back cleanly instead of leaving the database half-wiped.
+ */
+export async function importAllData(input: unknown): Promise<ImportResult> {
+  const { data, errors } = validateBackup(input);
+  if (!data) return { ok: false, errors };
+
+  try {
+    db.transaction((tx) => {
+      tx.delete(trades).run();
+      tx.delete(tags).run();
+      tx.delete(accounts).run();
+
+      if (data.accounts.length) tx.insert(accounts).values(data.accounts).run();
+      if (data.tags.length) tx.insert(tags).values(data.tags).run();
+      if (data.trades.length) tx.insert(trades).values(data.trades).run();
+
+      if (data.appSettings) {
+        tx.insert(appSettings)
+          .values({ ...data.appSettings, id: 1 })
+          .onConflictDoUpdate({ target: appSettings.id, set: data.appSettings })
+          .run();
+      }
+    });
+  } catch (err) {
+    return {
+      ok: false,
+      errors: [err instanceof Error ? err.message : "The database rejected this file."],
+    };
+  }
+
+  revalidatePath("/");
+  revalidatePath("/calendar");
+  revalidatePath("/trades");
+  revalidatePath("/accounts");
+  revalidatePath("/settings");
+  return { ok: true };
 }

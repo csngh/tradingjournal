@@ -2,7 +2,7 @@
 
 import { RotateCcw, SlidersHorizontal } from "lucide-react";
 import { inputClass, labelClass, secondaryButtonClass } from "@/components/ui/form";
-import type { Account } from "@/db/schema";
+import type { Account, Tag } from "@/db/schema";
 
 export type TradeFilters = {
   dateFrom: string;
@@ -12,6 +12,7 @@ export type TradeFilters = {
   side: string;
   timeframe: string;
   result: string;
+  tagId: string;
 };
 
 export const EMPTY_FILTERS: TradeFilters = {
@@ -22,6 +23,7 @@ export const EMPTY_FILTERS: TradeFilters = {
   side: "all",
   timeframe: "all",
   result: "all",
+  tagId: "all",
 };
 
 export function isFiltersEmpty(f: TradeFilters): boolean {
@@ -32,7 +34,8 @@ export function isFiltersEmpty(f: TradeFilters): boolean {
     f.symbol === "all" &&
     f.side === "all" &&
     f.timeframe === "all" &&
-    f.result === "all"
+    f.result === "all" &&
+    f.tagId === "all"
   );
 }
 
@@ -42,12 +45,14 @@ export function TradesFilterBar({
   accounts,
   symbols,
   timeframes,
+  tags,
 }: {
   filters: TradeFilters;
   onChange: (next: TradeFilters) => void;
   accounts: Account[];
   symbols: string[];
   timeframes: string[];
+  tags: Tag[];
 }) {
   function set<K extends keyof TradeFilters>(key: K, value: TradeFilters[K]) {
     onChange({ ...filters, [key]: value });
@@ -59,7 +64,7 @@ export function TradesFilterBar({
         <SlidersHorizontal size={13} />
         Filters
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-8">
         <div>
           <label className={labelClass}>From</label>
           <input
@@ -150,6 +155,22 @@ export function TradesFilterBar({
             <option value="be">Breakeven (all)</option>
             <option value="be-win">Breakeven → win</option>
             <option value="be-loss">Breakeven → loss</option>
+          </select>
+        </div>
+        <div>
+          <label className={labelClass}>Tag</label>
+          <select
+            className={inputClass}
+            value={filters.tagId}
+            onChange={(e) => set("tagId", e.target.value)}
+          >
+            <option value="all">All tags</option>
+            <option value="none">No tag</option>
+            {tags.map((t) => (
+              <option key={t.id} value={t.id} style={{ color: t.color }}>
+                {t.name}
+              </option>
+            ))}
           </select>
         </div>
       </div>

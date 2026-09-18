@@ -1,11 +1,15 @@
 import { db } from "@/db";
-import { accounts, appSettings, trades } from "@/db/schema";
+import { accounts, appSettings, tags, trades } from "@/db/schema";
 import { asc, eq, inArray } from "drizzle-orm";
-import type { Account, AppSettings, Trade } from "@/db/schema";
+import type { Account, AppSettings, Tag, Trade } from "@/db/schema";
 import { getSystemTimezone } from "@/lib/timezone";
 
 export async function getAllAccounts(): Promise<Account[]> {
   return db.select().from(accounts).orderBy(asc(accounts.sortOrder));
+}
+
+export async function getAllTags(): Promise<Tag[]> {
+  return db.select().from(tags).orderBy(asc(tags.sortOrder));
 }
 
 export async function getAccountsByIds(ids: string[]): Promise<Account[]> {

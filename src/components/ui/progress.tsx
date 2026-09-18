@@ -16,7 +16,7 @@ export function Progress({
   return (
     <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
       <div
-        className="h-full rounded-full transition-all"
+        className="animate-bar-grow h-full rounded-full transition-all"
         style={{ width: `${clamped}%`, background: color }}
       />
     </div>

@@ -10,7 +10,7 @@ export function ThemeToggle() {
     // Reads the value the inline layout script already applied to <html>,
     // so this only syncs the icon after mount and never causes a flash.
     // Storage access can throw (private browsing, blocked cookies, some
-    // extensions) — that must never take down the whole page.
+    // extensions), and that must never take down the whole page.
     let stored: "light" | "dark" = "dark";
     try {
       stored = (localStorage.getItem("theme") as "light" | "dark") ?? "dark";

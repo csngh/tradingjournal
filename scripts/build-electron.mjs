@@ -18,7 +18,7 @@ execSync("npx next build", {
 });
 
 if (!existsSync(standaloneDir)) {
-  throw new Error("Standalone output not found at .next/standalone — check next.config.ts.");
+  throw new Error("Standalone output not found at .next/standalone. Check next.config.ts.");
 }
 
 // Defense in depth: the real trade database must never ship inside the app,
@@ -26,7 +26,7 @@ if (!existsSync(standaloneDir)) {
 const leakedDataDir = path.join(standaloneDir, "data");
 if (existsSync(leakedDataDir)) {
   console.warn(
-    `⚠ Found ${leakedDataDir} in the standalone output — removing it. ` +
+    `⚠ Found ${leakedDataDir} in the standalone output. Removing it. ` +
       "This should not happen (see outputFileTracingExcludes in next.config.ts); please double check."
   );
   rmSync(leakedDataDir, { recursive: true, force: true });
@@ -45,8 +45,8 @@ cpSync(path.join(root, "drizzle"), path.join(standaloneDir, "drizzle"), { recurs
 // Next's dependency tracing only copies the files better-sqlite3 needs at
 // require-time (no binding.gyp/src), which electron-rebuild can't detect or
 // rebuild. So we rebuild a full, untouched copy of the module in an isolated
-// staging dir — never the project's own node_modules, which must stay built
-// for the system Node the web/dev server runs under — then swap the result in.
+// staging dir (never the project's own node_modules, which must stay built
+// for the system Node the web/dev server runs under), then swap the result in.
 console.log("→ Rebuilding better-sqlite3 for Electron's ABI in an isolated staging dir...");
 const stagingDir = path.join(root, ".next", "native-staging");
 rmSync(stagingDir, { recursive: true, force: true });
@@ -57,7 +57,7 @@ cpSync(
 );
 // better-sqlite3's binding.gyp skips compilation whenever a prebuilt binary
 // for the *running* Node already exists (it can't tell that prebuild was
-// built for the system Node, not Electron) — so the existing prebuild and
+// built for the system Node, not Electron), so the existing prebuild and
 // any stale build/ output must be removed to force a real compile.
 rmSync(path.join(stagingDir, "node_modules", "better-sqlite3", "prebuilds"), {
   recursive: true,
@@ -100,7 +100,7 @@ cpSync(path.join(stagingDir, "node_modules", "better-sqlite3"), targetModuleDir,
 rmSync(stagingDir, { recursive: true, force: true });
 
 // Turbopack's `serverExternalPackages` output (.next/node_modules/<pkg>-<hash>)
-// is a SYMLINK back to the absolute build-time path — it does not survive
+// is a SYMLINK back to the absolute build-time path. It does not survive
 // moving/copying the standalone bundle elsewhere, or the original .next
 // folder being cleaned up later, which breaks the packaged app with
 // "Cannot find module" at runtime. Replace each such symlink with a real,

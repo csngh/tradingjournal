@@ -50,9 +50,12 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="mt-auto flex items-start gap-1.5 px-6 py-6 text-xs text-[var(--text-faint)]">
-        <ShieldCheck size={14} className="mt-0.5 shrink-0" />
-        Local &amp; private, your data never leaves this machine.
+      <div className="mt-auto flex flex-col gap-2 px-6 py-6">
+        <div className="flex items-start gap-1.5 text-xs text-[var(--text-faint)]">
+          <ShieldCheck size={14} className="mt-0.5 shrink-0" />
+          Local &amp; private, your data never leaves this machine.
+        </div>
+        <p className="text-[11px] text-[var(--text-faint)]">Made with ❤️ by Bros for Bros.</p>
       </div>
     </aside>
   );

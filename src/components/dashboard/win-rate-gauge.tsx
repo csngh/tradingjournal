@@ -71,7 +71,17 @@ export function WinRateGauge({
         </defs>
         <path d={arc(180, 0)} fill="none" stroke="var(--surface-2)" strokeWidth={STROKE} strokeLinecap="round" />
         {paths.map((p, i) => (
-          <path key={i} d={p.d} fill="none" stroke={p.color} strokeWidth={STROKE} strokeLinecap="round" />
+          <path
+            key={i}
+            d={p.d}
+            fill="none"
+            stroke={p.color}
+            strokeWidth={STROKE}
+            strokeLinecap="round"
+            pathLength={1}
+            className="animate-stroke-draw"
+            style={{ strokeDasharray: 1, strokeDashoffset: 1, animationDelay: `${i * 90}ms` }}
+          />
         ))}
         <text
           x={CX}

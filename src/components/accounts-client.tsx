@@ -78,7 +78,7 @@ export function AccountsClient({ items }: { items: AccountWithMetrics[] }) {
 
       {items.length === 0 && (
         <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface)] px-6 py-16 text-center text-sm text-[var(--text-muted)]">
-          No accounts yet — add your first prop firm or broker account to get started.
+          No accounts yet. Add your first prop firm or broker account to get started.
         </div>
       )}
 

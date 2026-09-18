@@ -18,7 +18,7 @@ import { formatCurrency } from "@/lib/metrics";
 import { zonedDayKey } from "@/lib/timezone";
 import { Badge } from "@/components/ui/badge";
 import { TradeForm } from "@/components/trade-form";
-import type { Account, Trade } from "@/db/schema";
+import type { Account, Tag, Trade } from "@/db/schema";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
@@ -29,12 +29,14 @@ const MONTHS = [
 export function CalendarClient({
   monthParam,
   accounts,
+  tags,
   trades,
   timeZone,
   fillHeight = true,
 }: {
   monthParam: string;
   accounts: Account[];
+  tags: Tag[];
   trades: Trade[];
   timeZone: string;
   /** Fill the available viewport height (standalone page) vs. size to content (dashboard). */
@@ -396,6 +398,7 @@ export function CalendarClient({
         open={formOpen}
         onClose={() => setFormOpen(false)}
         accounts={accounts}
+        tags={tags}
         trade={editing}
         timeZone={timeZone}
         defaultDate={selectedDay ?? undefined}

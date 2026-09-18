@@ -44,8 +44,9 @@ export function RatioRing({ won, lost }: { won: number; lost: number }) {
               stroke="url(#ratioWonGrad)"
               strokeWidth={STROKE}
               strokeLinecap="round"
-              strokeDasharray={`${wonLen} ${CIRC - wonLen}`}
               strokeDashoffset={-GAP / 2}
+              className="animate-ring-grow"
+              style={{ strokeDasharray: `${wonLen} ${CIRC - wonLen}` }}
             />
             <circle
               cx={SIZE / 2}
@@ -55,8 +56,9 @@ export function RatioRing({ won, lost }: { won: number; lost: number }) {
               stroke="url(#ratioLostGrad)"
               strokeWidth={STROKE}
               strokeLinecap="round"
-              strokeDasharray={`${lostLen} ${CIRC - lostLen}`}
               strokeDashoffset={-(wonShare * CIRC + GAP / 2)}
+              className="animate-ring-grow"
+              style={{ strokeDasharray: `${lostLen} ${CIRC - lostLen}` }}
             />
           </>
         )}

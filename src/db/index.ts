@@ -31,8 +31,8 @@ globalForDb.__tradeJournalDb = sqlite;
 
 export const db = drizzle(sqlite, { schema });
 
-// Brings a fresh database up to the latest schema automatically — no manual
-// migration step required on first launch (dev, prod, or the packaged app).
+// Brings a fresh database up to the latest schema automatically. No manual
+// migration step is required on first launch (dev, prod, or the packaged app).
 if (!existingConnection) {
   migrate(db, { migrationsFolder });
 }

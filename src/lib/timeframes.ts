@@ -24,7 +24,7 @@ export function minutesForTimeframe(value: string): number {
 /**
  * Snaps a datetime-local string ("YYYY-MM-DDTHH:mm") forward to the close of
  * the candle it falls inside for the given timeframe, e.g. 10:03 on a 5m
- * timeframe becomes 10:05 — the close of the candle the entry happened in.
+ * timeframe becomes 10:05, the close of the candle the entry happened in.
  */
 export function bucketToCandleClose(localDateTimeStr: string, minutes: number): string {
   if (!localDateTimeStr) return localDateTimeStr;

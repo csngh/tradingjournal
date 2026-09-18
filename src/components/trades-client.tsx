@@ -1,24 +1,28 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { PlusCircle, TrendingUp, TrendingDown, ListOrdered, Download } from "lucide-react";
+import { PlusCircle, TrendingUp, TrendingDown, ListOrdered, Download, Pencil } from "lucide-react";
 import { TradeForm } from "@/components/trade-form";
+import { TradeDetailModal } from "@/components/trade-detail-modal";
 import { TradesFilterBar, EMPTY_FILTERS, isFiltersEmpty, type TradeFilters } from "@/components/trades-filter-bar";
 import { TradesSummary } from "@/components/trades-summary";
 import { Badge } from "@/components/ui/badge";
+import { TagPill } from "@/components/ui/tag-pill";
 import { primaryButtonClass, secondaryButtonClass } from "@/components/ui/form";
 import { formatCurrency, isScratchTrade, computeTradeStats } from "@/lib/metrics";
-import { formatZonedDate, zonedDayKey } from "@/lib/timezone";
+import { formatZonedDate, formatZonedTime, zonedDayKey } from "@/lib/timezone";
 import { tradesToCsv, downloadCsv } from "@/lib/csv";
-import type { Account, Trade } from "@/db/schema";
+import type { Account, Tag, Trade } from "@/db/schema";
 
 export function TradesClient({
   accounts,
+  tags,
   trades,
   timeZone,
   countBreakeven,
 }: {
   accounts: Account[];
+  tags: Tag[];
   trades: Trade[];
   timeZone: string;
   countBreakeven: boolean;
@@ -27,6 +31,8 @@ export function TradesClient({
   const [editing, setEditing] = useState<Trade | null>(null);
   const [formKey, setFormKey] = useState(0);
   const [filters, setFilters] = useState<TradeFilters>(EMPTY_FILTERS);
+  const [viewing, setViewing] = useState<Trade | null>(null);
+  const [viewOpen, setViewOpen] = useState(false);
 
   function openAdd() {
     setEditing(null);
@@ -40,7 +46,13 @@ export function TradesClient({
     setFormOpen(true);
   }
 
+  function openView(trade: Trade) {
+    setViewing(trade);
+    setViewOpen(true);
+  }
+
   const accountById = new Map(accounts.map((a) => [a.id, a]));
+  const tagById = new Map(tags.map((t) => [t.id, t]));
 
   const symbols = useMemo(
     () => Array.from(new Set(trades.map((t) => t.symbol))).sort(),
@@ -57,6 +69,8 @@ export function TradesClient({
       if (filters.symbol !== "all" && t.symbol !== filters.symbol) return false;
       if (filters.side !== "all" && t.side !== filters.side) return false;
       if (filters.timeframe !== "all" && t.timeframe !== filters.timeframe) return false;
+      if (filters.tagId === "none" && t.tagId) return false;
+      if (filters.tagId !== "all" && filters.tagId !== "none" && t.tagId !== filters.tagId) return false;
 
       const net = t.pnl - t.fees;
       const scratch = isScratchTrade(t);
@@ -90,7 +104,7 @@ export function TradesClient({
   );
 
   function handleExport() {
-    const csv = tradesToCsv(filteredTrades, accounts, timeZone);
+    const csv = tradesToCsv(filteredTrades, accounts, tags, timeZone);
     const stamp = new Date().toISOString().slice(0, 10);
     downloadCsv(`trades-${stamp}.csv`, csv);
   }
@@ -124,7 +138,7 @@ export function TradesClient({
         </div>
       ) : trades.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface)] px-6 py-16 text-center text-sm text-[var(--text-muted)]">
-          No trades yet for this filter — log your first trade.
+          No trades yet for this filter. Log your first trade.
         </div>
       ) : (
         <>
@@ -134,6 +148,7 @@ export function TradesClient({
             accounts={accounts}
             symbols={symbols}
             timeframes={timeframes}
+            tags={tags}
           />
 
           {!isFiltersEmpty(filters) && (
@@ -161,35 +176,42 @@ export function TradesClient({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] text-left text-xs font-medium text-[var(--text-muted)]">
-                  <th className="px-4 py-3">Date</th>
                   <th className="px-4 py-3">Account</th>
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Entry Time</th>
                   <th className="px-4 py-3">Symbol</th>
                   <th className="px-4 py-3">Side</th>
+                  <th className="px-4 py-3">Tag</th>
                   <th className="px-4 py-3">TF</th>
                   <th className="px-4 py-3 text-right">Qty</th>
                   <th className="px-4 py-3 text-right">Points</th>
                   <th className="px-4 py-3 text-right">Fees</th>
                   <th className="px-4 py-3 text-right">Net P&amp;L</th>
+                  <th className="px-4 py-3 text-right"></th>
                 </tr>
               </thead>
               <tbody>
                 {filteredTrades.map((t) => {
                   const net = t.pnl - t.fees;
                   const account = accountById.get(t.accountId);
+                  const tag = t.tagId ? tagById.get(t.tagId) : undefined;
                   return (
                     <tr
                       key={t.id}
-                      onClick={() => openEdit(t)}
+                      onClick={() => openView(t)}
                       className="cursor-pointer border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)]"
                     >
-                      <td className="whitespace-nowrap px-4 py-3 text-[var(--text-muted)]">
-                        {formatZonedDate(t.exitTime, timeZone)}
-                      </td>
                       <td className="whitespace-nowrap px-4 py-3">
                         <span className="flex items-center gap-1.5">
                           <span className="h-1.5 w-1.5 rounded-full" style={{ background: account?.color }} />
                           {account?.name ?? "—"}
                         </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-[var(--text-muted)]">
+                        {formatZonedDate(t.exitTime, timeZone)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-[var(--text-muted)]">
+                        {formatZonedTime(t.entryTime, timeZone)}
                       </td>
                       <td className="px-4 py-3 font-medium text-[var(--text)]">{t.symbol}</td>
                       <td className="px-4 py-3">
@@ -197,6 +219,9 @@ export function TradesClient({
                           <Badge tone={t.side === "LONG" ? "profit" : "loss"}>{t.side}</Badge>
                           {t.isBreakeven && <Badge tone="neutral">BE</Badge>}
                         </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        {tag ? <TagPill tag={tag} /> : <span className="text-[var(--text-faint)]">—</span>}
                       </td>
                       <td className="px-4 py-3 text-[var(--text-muted)]">{t.timeframe}</td>
                       <td className="px-4 py-3 text-right tabular">{t.contracts}</td>
@@ -217,6 +242,18 @@ export function TradesClient({
                           {formatCurrency(net)}
                         </span>
                       </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEdit(t);
+                          }}
+                          title="Edit trade"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] cursor-pointer"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -233,7 +270,21 @@ export function TradesClient({
         open={formOpen}
         onClose={() => setFormOpen(false)}
         accounts={accounts}
+        tags={tags}
         trade={editing}
+        timeZone={timeZone}
+      />
+
+      <TradeDetailModal
+        open={viewOpen}
+        onClose={() => setViewOpen(false)}
+        onEdit={() => {
+          setViewOpen(false);
+          if (viewing) openEdit(viewing);
+        }}
+        trade={viewing}
+        account={viewing ? accountById.get(viewing.accountId) : undefined}
+        tag={viewing?.tagId ? tagById.get(viewing.tagId) : undefined}
         timeZone={timeZone}
       />
     </div>

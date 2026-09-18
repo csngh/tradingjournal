@@ -37,6 +37,17 @@ export const accounts = sqliteTable("accounts", {
     .default(sql`(current_timestamp)`),
 });
 
+export const tags = sqliteTable("tags", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  color: text("color").notNull().default("#6366f1"),
+  sortOrder: integer("sort_order").notNull().default(0),
+
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
 export const trades = sqliteTable("trades", {
   id: text("id").primaryKey(),
   accountId: text("account_id")
@@ -56,7 +67,10 @@ export const trades = sqliteTable("trades", {
   pnl: real("pnl").notNull(),
   isBreakeven: integer("is_breakeven", { mode: "boolean" }).notNull().default(false),
   beOutcome: text("be_outcome", { enum: ["WIN", "LOSS"] }),
+  /** @deprecated Unused free-text tag field, superseded by tagId. Kept only so the column drop
+   * doesn't require an ambiguous drizzle-kit rename-detection prompt against a real database. */
   tags: text("tags"),
+  tagId: text("tag_id").references(() => tags.id, { onDelete: "set null" }),
   notes: text("notes"),
 
   createdAt: text("created_at")
@@ -92,10 +106,20 @@ export const tradesRelations = relations(trades, ({ one }) => ({
     fields: [trades.accountId],
     references: [accounts.id],
   }),
+  tag: one(tags, {
+    fields: [trades.tagId],
+    references: [tags.id],
+  }),
+}));
+
+export const tagsRelations = relations(tags, ({ many }) => ({
+  trades: many(trades),
 }));
 
 export type Account = typeof accounts.$inferSelect;
 export type NewAccount = typeof accounts.$inferInsert;
 export type Trade = typeof trades.$inferSelect;
 export type NewTrade = typeof trades.$inferInsert;
+export type Tag = typeof tags.$inferSelect;
+export type NewTag = typeof tags.$inferInsert;
 export type AppSettings = typeof appSettings.$inferSelect;
