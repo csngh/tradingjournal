@@ -80,6 +80,8 @@ async function createWindow() {
     minHeight: 640,
     title: APP_NAME,
     backgroundColor: "#0b0b0f",
+    titleBarStyle: "hiddenInset",
+    trafficLightPosition: { x: 18, y: 20 },
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

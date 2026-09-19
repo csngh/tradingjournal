@@ -149,3 +149,24 @@ body {
     animation: none;
   }
 }
+
+/* Inset macOS title bar (Electron): traffic lights overlay our own UI, so reserve space and make the top edge draggable. */
+.electron-mac body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  z-index: 1;
+  -webkit-app-region: drag;
+}
+.electron-mac header {
+  -webkit-app-region: drag;
+}
+.electron-mac :is(button, a, input, select, textarea, label) {
+  -webkit-app-region: no-drag;
+}
+.electron-mac aside > div:first-child {
+  padding-top: 2.75rem;
+}

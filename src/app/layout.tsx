@@ -23,6 +23,9 @@ const themeScript = `
     var theme = localStorage.getItem("theme") || "dark";
     document.documentElement.setAttribute("data-theme", theme);
   } catch (e) {}
+  if (/Electron/.test(navigator.userAgent) && /Mac/.test(navigator.userAgent)) {
+    document.documentElement.classList.add("electron-mac");
+  }
 })();
 `;
 

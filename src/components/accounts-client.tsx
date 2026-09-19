@@ -88,13 +88,13 @@ export function AccountsClient({ items }: { items: AccountWithMetrics[] }) {
           const followers = allAccounts.filter((f) => f.masterId === a.id);
 
           return (
-            <div key={a.id} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: a.color }} />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-semibold text-[var(--text)]">{a.name}</h3>
+            <div key={a.id} className="min-w-0 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 flex-1 items-start gap-2">
+                  <span className="mt-[5px] h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: a.color }} />
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <h3 className="min-w-0 break-words text-sm font-semibold text-[var(--text)]">{a.name}</h3>
                       {a.role === "MASTER" && (
                         <Badge tone="accent">
                           <Crown size={10} className="mr-0.5" />
@@ -131,7 +131,7 @@ export function AccountsClient({ items }: { items: AccountWithMetrics[] }) {
                     <p className="text-xs text-[var(--text-muted)]">{a.broker || "No broker set"}</p>
                   </div>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex shrink-0 gap-1">
                   <button
                     onClick={() => openEdit(a)}
                     className="flex h-7 w-7 items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--surface-2)] cursor-pointer"
