@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Database, Download, Upload, AlertTriangle } from "lucide-react";
 import { exportAllData, importAllData } from "@/app/actions";
 import { primaryButtonClass, secondaryButtonClass } from "@/components/ui/form";
+import { BACKTEST_ENABLED } from "@/lib/features";
 
 function downloadJson(filename: string, data: unknown) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -48,7 +49,7 @@ export function DataManager() {
     if (!file) return;
 
     const confirmed = window.confirm(
-      "Importing replaces every account, trade, tag, and saved setting currently on this device " +
+      `Importing replaces every account, trade, tag, ${BACKTEST_ENABLED ? "backtest strategy, " : ""}and saved setting currently on this device ` +
         "with the contents of this file. This can't be undone. Continue?"
     );
     if (!confirmed) return;
@@ -82,7 +83,7 @@ export function DataManager() {
         Backup &amp; transfer
       </h2>
       <p className="mt-1 text-sm text-[var(--text-muted)]">
-        Export every account, trade, tag, and saved setting as a single JSON file. Import that
+        Export every account, trade, tag, {BACKTEST_ENABLED ? "backtest strategy, " : ""}and saved setting as a single JSON file. Import that
         file on another device to move your whole journal over.
       </p>
 
@@ -123,7 +124,7 @@ export function DataManager() {
 
       <p className="mt-3 text-[11px] text-[var(--text-muted)]">
         Importing replaces everything currently stored on this device. Export a fresh backup
-        first if you want to keep what's here.
+        first if you want to keep what&apos;s here.
       </p>
     </div>
   );

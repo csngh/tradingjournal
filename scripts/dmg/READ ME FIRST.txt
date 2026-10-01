@@ -1,0 +1,27 @@
+GRINGOTTS TRADING JOURNAL
+=========================
+
+1. Drag "Gringotts Trading Journal" onto the Applications folder.
+2. Open it from Applications.
+
+For Apple Silicon Macs only (M1 or later), macOS 13 or newer.
+It does not run on Intel Macs.
+
+
+IF MACOS SAYS THE APP "CANNOT BE OPENED" OR "CANNOT BE VERIFIED"
+----------------------------------------------------------------
+The app is not signed with a paid Apple Developer ID, so macOS asks you to
+approve it once. Use ONE of these:
+
+A) System Settings > Privacy & Security. Scroll down to the Security section,
+   find the message about "Gringotts Trading Journal" and click "Open Anyway".
+   Enter your password, then click "Open".
+   (On recent macOS, right-click > Open no longer works.)
+
+B) Open Terminal and run this, then open the app normally:
+
+   xattr -dr com.apple.quarantine "/Applications/Gringotts Trading Journal.app"
+
+You only need to do this the first time.
+
+Your data stays on your Mac. The app never sends it anywhere.

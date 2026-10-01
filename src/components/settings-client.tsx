@@ -9,6 +9,7 @@ import { DataManager } from "@/components/data-manager";
 import { DangerZone } from "@/components/danger-zone";
 import type { TimezoneOption } from "@/lib/timezone";
 import type { Tag } from "@/db/schema";
+import { BACKTEST_ENABLED } from "@/lib/features";
 
 export function SettingsClient({
   currentTimezone,
@@ -126,8 +127,8 @@ export function SettingsClient({
         </h2>
         <p className="mt-1 text-sm text-[var(--text-muted)]">
           Controls whether breakeven trades count toward trade-quality metrics like win rate and
-          profit factor. Net P&amp;L and account balance always reflect the real dollar result
-          regardless of this setting.
+          profit factor, on the dashboard and the Trades page{BACKTEST_ENABLED ? " and Backtest strategies" : ""}.
+          Net P&amp;L and account balance always reflect the real dollar result regardless of this setting.
         </p>
 
         <div className="mt-3 flex gap-1 rounded-xl bg-[var(--surface-2)] p-1">

@@ -1,0 +1,1 @@
+ALTER TABLE `strategies` ADD `rr` real;

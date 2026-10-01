@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { resetAllData } from "@/app/actions";
 import { inputClass, secondaryButtonClass } from "@/components/ui/form";
+import { BACKTEST_ENABLED } from "@/lib/features";
 
 const CONFIRM_WORD = "DELETE";
 
@@ -39,6 +40,9 @@ export function DangerZone() {
     try {
       await resetAllData();
       clearClientStorage();
+      // A hard reload, not router.push: after wiping everything, nothing client-side (React state,
+      // Next's router cache, in-memory query results) should survive into the next render.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.href = "/";
     } catch {
       setDeleting(false);
@@ -52,7 +56,7 @@ export function DangerZone() {
         Danger zone
       </h2>
       <p className="mt-1 text-sm text-[var(--text-muted)]">
-        Permanently deletes every account, trade, tag, and saved setting from this device, and
+        Permanently deletes every account, trade, tag, {BACKTEST_ENABLED ? "backtest strategy, " : ""}and saved setting from this device, and
         clears this app&apos;s local browser storage. There is no undo and no backup is made.
         Export a backup first if you want to keep anything.
       </p>

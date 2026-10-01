@@ -10,8 +10,15 @@ const nextConfig: NextConfig = {
   // happens to be sitting in ./data (including real trade data) into the
   // standalone output.
   outputFileTracingExcludes: {
-    "*": ["./data/**"],
+    "*": [
+      "./data/**",
+      // The packaged app serves its own local logo, so image optimization is switched off (below).
+      // Bundling sharp would only ship native binaries for the build machine's chip, which is wrong
+      // for the other Mac architecture.
+      ...(process.env.ELECTRON_BUILD ? ["./node_modules/sharp/**", "./node_modules/@img/**"] : []),
+    ],
   },
+  images: process.env.ELECTRON_BUILD ? { unoptimized: true } : undefined,
 };
 
 export default nextConfig;

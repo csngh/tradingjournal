@@ -15,6 +15,34 @@
       "when": 1789718825850,
       "tag": "0001_large_ikaris",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789852595678,
+      "tag": "0002_high_lady_deathstrike",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1789853948914,
+      "tag": "0003_chilly_surge",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789913153531,
+      "tag": "0004_clever_boomerang",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1790593943322,
+      "tag": "0005_complete_doctor_octopus",
+      "breakpoints": true
     }
   ]
 }

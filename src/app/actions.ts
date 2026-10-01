@@ -3,10 +3,10 @@
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { accounts, appSettings, tags, trades } from "@/db/schema";
+import { accounts, appSettings, backtestTrades, strategies, tags, trades } from "@/db/schema";
 import { eq, and, ne } from "drizzle-orm";
 import { getAllAccounts, getAllTags, getFollowers } from "@/lib/data";
-import { validateBackup, type BackupData } from "@/lib/backup";
+import { validateBackup, validateBacktestBackup, type BackupData, type BacktestBackupData } from "@/lib/backup";
 
 // ---------- Settings ----------
 
@@ -333,18 +333,221 @@ export async function deleteTrade(id: string) {
   revalidatePath("/trades");
 }
 
+// ---------- Backtesting ----------
+
+export type StrategyInput = {
+  name: string;
+  description: string | null;
+  color: string;
+  symbol: string;
+  timeframe: string;
+  pointValue: number;
+  contracts: number;
+  tpPoints: number | null;
+  slPoints: number | null;
+  /** Reward-to-risk multiple; when set it replaces `tpPoints`. */
+  rr: number | null;
+  maxTradesPerDay: number | null;
+  feePerContract: number;
+  startingCapital: number;
+  notes: string | null;
+};
+
+export type BacktestTradeInput = {
+  strategyId: string;
+  side: "LONG" | "SHORT";
+  entryTime: string;
+  /** False when only the date is known; the clock part of `entryTime` is then a placeholder. */
+  hasEntryTime: boolean;
+  contracts: number;
+  points: number;
+  fees: number;
+  exitReason: "TP" | "SL" | "BE" | "MANUAL";
+  /** Breakeven trades only: would it ultimately have been a win or a loss? Analytics only. */
+  beOutcome: "WIN" | "LOSS" | null;
+  notes: string | null;
+};
+
+function positiveOrNull(n: number | null): number | null {
+  return n != null && Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function cleanStrategy(input: StrategyInput): StrategyInput {
+  const name = input.name.trim();
+  const symbol = input.symbol.trim().toUpperCase();
+  if (!name) throw new Error("A strategy needs a name.");
+  if (!symbol) throw new Error("A strategy needs a symbol.");
+  if (!Number.isFinite(input.pointValue) || input.pointValue <= 0) {
+    throw new Error("Point value must be greater than zero.");
+  }
+  return {
+    ...input,
+    name,
+    symbol,
+    description: input.description?.trim() || null,
+    notes: input.notes?.trim() || null,
+    contracts: Math.max(1, Math.round(input.contracts) || 1),
+    rr: positiveOrNull(input.rr),
+    tpPoints: positiveOrNull(input.rr) != null ? null : positiveOrNull(input.tpPoints),
+    slPoints: positiveOrNull(input.slPoints),
+    maxTradesPerDay:
+      input.maxTradesPerDay != null && input.maxTradesPerDay > 0 ? Math.round(input.maxTradesPerDay) : null,
+    feePerContract: Number.isFinite(input.feePerContract) && input.feePerContract > 0 ? input.feePerContract : 0,
+    startingCapital: Number.isFinite(input.startingCapital) && input.startingCapital > 0 ? input.startingCapital : 0,
+  };
+}
+
+function cleanBacktestTrade(input: BacktestTradeInput): BacktestTradeInput {
+  if (!["LONG", "SHORT"].includes(input.side)) throw new Error("Invalid side.");
+  if (!["TP", "SL", "BE", "MANUAL"].includes(input.exitReason)) throw new Error("Invalid exit reason.");
+  if (Number.isNaN(Date.parse(input.entryTime))) throw new Error("Invalid entry time.");
+  if (!Number.isFinite(input.points)) throw new Error("Points must be a number.");
+  return {
+    ...input,
+    // A breakeven trade never moves points, but it still pays fees.
+    points: input.exitReason === "BE" ? 0 : input.points,
+    beOutcome:
+      input.exitReason === "BE" && (input.beOutcome === "WIN" || input.beOutcome === "LOSS") ? input.beOutcome : null,
+    hasEntryTime: input.hasEntryTime !== false,
+    contracts: Math.max(1, Math.round(input.contracts) || 1),
+    fees: Number.isFinite(input.fees) && input.fees > 0 ? input.fees : 0,
+    notes: input.notes?.trim() || null,
+  };
+}
+
+function revalidateBacktest(strategyId?: string) {
+  revalidatePath("/backtest");
+  if (strategyId) revalidatePath(`/backtest/${strategyId}`);
+}
+
+export async function createStrategy(input: StrategyInput) {
+  const data = cleanStrategy(input);
+  const id = randomUUID();
+  await db.insert(strategies).values({ id, ...data });
+  revalidateBacktest();
+  return id;
+}
+
+export async function updateStrategy(id: string, input: StrategyInput) {
+  const data = cleanStrategy(input);
+  await db
+    .update(strategies)
+    .set({ ...data, updatedAt: new Date().toISOString() })
+    .where(eq(strategies.id, id));
+  revalidateBacktest(id);
+}
+
+export async function deleteStrategy(id: string) {
+  await db.delete(strategies).where(eq(strategies.id, id));
+  revalidateBacktest(id);
+}
+
+export async function createBacktestTrade(input: BacktestTradeInput) {
+  const data = cleanBacktestTrade(input);
+  await db.insert(backtestTrades).values({ id: randomUUID(), ...data });
+  revalidateBacktest(data.strategyId);
+}
+
+export async function updateBacktestTrade(id: string, input: BacktestTradeInput) {
+  const data = cleanBacktestTrade(input);
+  await db.update(backtestTrades).set(data).where(eq(backtestTrades.id, id));
+  revalidateBacktest(data.strategyId);
+}
+
+export async function deleteBacktestTrade(id: string) {
+  const [existing] = await db.select().from(backtestTrades).where(eq(backtestTrades.id, id));
+  if (!existing) return;
+  await db.delete(backtestTrades).where(eq(backtestTrades.id, id));
+  revalidateBacktest(existing.strategyId);
+}
+
+export async function clearBacktestTrades(strategyId: string) {
+  await db.delete(backtestTrades).where(eq(backtestTrades.strategyId, strategyId));
+  revalidateBacktest(strategyId);
+}
+
+/** Bulk-inserts already-parsed rows in one transaction; rejects the whole batch if any row is invalid. */
+export async function importBacktestTrades(strategyId: string, rows: Omit<BacktestTradeInput, "strategyId">[]) {
+  const cleaned = rows.map((r) => cleanBacktestTrade({ ...r, strategyId }));
+  if (cleaned.length === 0) return { count: 0 };
+  db.transaction((tx) => {
+    for (let i = 0; i < cleaned.length; i += 200) {
+      tx.insert(backtestTrades)
+        .values(cleaned.slice(i, i + 200).map((r) => ({ id: randomUUID(), ...r })))
+        .run();
+    }
+  });
+  revalidateBacktest(strategyId);
+  return { count: cleaned.length };
+}
+
+// ---------- Backtest-only export / import ----------
+
+const BACKTEST_BACKUP_FORMAT_VERSION = 1;
+
+export type { BacktestBackupData } from "@/lib/backup";
+
+/** Every strategy and every backtest trade, with no accounts/trades/tags/settings — for moving just the Backtest section between devices. */
+export async function exportBacktestData(): Promise<BacktestBackupData> {
+  const [strategyRows, backtestTradeRows] = await Promise.all([
+    db.select().from(strategies),
+    db.select().from(backtestTrades),
+  ]);
+
+  return {
+    formatVersion: BACKTEST_BACKUP_FORMAT_VERSION,
+    exportedAt: new Date().toISOString(),
+    strategies: strategyRows,
+    backtestTrades: backtestTradeRows,
+  };
+}
+
+/**
+ * Replaces every strategy and backtest trade with the contents of a previously exported backtest
+ * backup. Accounts, real trades, tags and settings are untouched. Same validate-then-transact
+ * pattern as `importAllData`, scoped to just these two tables.
+ */
+export async function importBacktestData(input: unknown): Promise<ImportResult> {
+  const { data, errors } = validateBacktestBackup(input);
+  if (!data) return { ok: false, errors };
+
+  try {
+    db.transaction((tx) => {
+      tx.delete(backtestTrades).run();
+      tx.delete(strategies).run();
+
+      if (data.strategies.length) tx.insert(strategies).values(data.strategies).run();
+      if (data.backtestTrades.length) {
+        for (let i = 0; i < data.backtestTrades.length; i += 200) {
+          tx.insert(backtestTrades).values(data.backtestTrades.slice(i, i + 200)).run();
+        }
+      }
+    });
+  } catch (err) {
+    return {
+      ok: false,
+      errors: [err instanceof Error ? err.message : "The database rejected this file."],
+    };
+  }
+
+  revalidateBacktest();
+  return { ok: true };
+}
+
 // ---------- Full data export / import ----------
 
-const BACKUP_FORMAT_VERSION = 1;
+const BACKUP_FORMAT_VERSION = 2;
 
 export type { BackupData } from "@/lib/backup";
 
 export async function exportAllData(): Promise<BackupData> {
-  const [accountRows, tagRows, tradeRows, settingsRows] = await Promise.all([
+  const [accountRows, tagRows, tradeRows, settingsRows, strategyRows, backtestTradeRows] = await Promise.all([
     db.select().from(accounts),
     db.select().from(tags),
     db.select().from(trades),
     db.select().from(appSettings).where(eq(appSettings.id, 1)),
+    db.select().from(strategies),
+    db.select().from(backtestTrades),
   ]);
 
   return {
@@ -354,13 +557,15 @@ export async function exportAllData(): Promise<BackupData> {
     accounts: accountRows,
     tags: tagRows,
     trades: tradeRows,
+    strategies: strategyRows,
+    backtestTrades: backtestTradeRows,
   };
 }
 
 export type ImportResult = { ok: true } | { ok: false; errors: string[] };
 
 /**
- * Replaces every account, tag, trade, and the saved settings with the contents of a previously
+ * Replaces every account, tag, trade, backtest strategy (with its trades), and the saved settings with the contents of a previously
  * exported backup. `validateBackup` checks required fields, enum values, and cross-references
  * (trade -> account, trade -> tag, account -> master account) before anything is written. The
  * write itself is wrapped in a single SQLite transaction (better-sqlite3 transactions must run
@@ -373,10 +578,18 @@ export async function importAllData(input: unknown): Promise<ImportResult> {
 
   try {
     db.transaction((tx) => {
+      tx.delete(backtestTrades).run();
+      tx.delete(strategies).run();
       tx.delete(trades).run();
       tx.delete(tags).run();
       tx.delete(accounts).run();
 
+      if (data.strategies.length) tx.insert(strategies).values(data.strategies).run();
+      if (data.backtestTrades.length) {
+        for (let i = 0; i < data.backtestTrades.length; i += 200) {
+          tx.insert(backtestTrades).values(data.backtestTrades.slice(i, i + 200)).run();
+        }
+      }
       if (data.accounts.length) tx.insert(accounts).values(data.accounts).run();
       if (data.tags.length) tx.insert(tags).values(data.tags).run();
       if (data.trades.length) tx.insert(trades).values(data.trades).run();
@@ -400,23 +613,27 @@ export async function importAllData(input: unknown): Promise<ImportResult> {
   revalidatePath("/trades");
   revalidatePath("/accounts");
   revalidatePath("/settings");
+  revalidatePath("/backtest", "layout");
   return { ok: true };
 }
 
 /**
- * Wipes every account, trade, tag, and saved setting, leaving a completely empty database (the
+ * Wipes every account, trade, tag, backtest strategy, and saved setting, leaving a completely empty database (the
  * next read of app settings recreates a default row). This is strictly local to this device's
  * SQLite file; it can't reach browser storage or Electron/Chromium's own caches, so the client
  * is responsible for clearing localStorage and reloading after this resolves.
  */
 export async function resetAllData() {
   db.transaction((tx) => {
+    tx.delete(backtestTrades).run();
+    tx.delete(strategies).run();
     tx.delete(trades).run();
     tx.delete(tags).run();
     tx.delete(accounts).run();
     tx.delete(appSettings).run();
   });
 
+  revalidatePath("/backtest", "layout");
   revalidatePath("/");
   revalidatePath("/calendar");
   revalidatePath("/trades");

@@ -11,8 +11,9 @@
     "build:electron": "node scripts/build-electron.mjs",
     "package:mac:dir": "electron-builder --mac --dir",
     "inject:resources": "node scripts/inject-resources.mjs",
-    "dist:mac": "npm run build:electron && npm run package:mac:dir && npm run inject:resources",
-    "dist:mac:dmg": "npm run dist:mac && electron-builder --mac --prepackaged \"release/mac-arm64/Gringotts Trading Journal.app\""
+    "sign:mac": "node scripts/sign-mac.mjs",
+    "dist:mac": "npm run build:electron && npm run package:mac:dir && npm run inject:resources && npm run sign:mac",
+    "dist:mac:dmg": "node scripts/dist-mac.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
@@ -63,6 +64,14 @@
       "!**/node_modules",
       "!**/node_modules/**"
     ],
+    "dmg": {
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "contents": [
+        { "x": 130, "y": 150 },
+        { "x": 410, "y": 150, "type": "link", "path": "/Applications" },
+        { "x": 270, "y": 330, "type": "file", "path": "scripts/dmg/READ ME FIRST.txt" }
+      ]
+    },
     "mac": {
       "category": "public.app-category.finance",
       "icon": "electron/icon.icns",

@@ -10,12 +10,24 @@ function run(cmd) {
   execSync(cmd, { stdio: "inherit", cwd: root });
 }
 
-console.log("→ Building Next.js (standalone output)...");
-execSync("npx next build", {
-  stdio: "inherit",
-  cwd: root,
-  env: { ...process.env, ELECTRON_BUILD: "1" },
-});
+// Which chip the bundled native module is compiled for. `--skip-next` reuses the Next build already
+// in .next (the JavaScript is identical for every chip; only better-sqlite3 differs).
+const archArg = process.argv.find((a) => a.startsWith("--arch="))?.split("=")[1];
+const arch = archArg ?? (process.arch === "arm64" ? "arm64" : "x64");
+if (!["arm64", "x64"].includes(arch)) throw new Error(`Unsupported --arch=${arch} (use arm64 or x64).`);
+const skipNext = process.argv.includes("--skip-next");
+console.log(`→ Target architecture: ${arch}`);
+
+if (skipNext) {
+  console.log("→ Reusing the existing Next.js build (--skip-next)...");
+} else {
+  console.log("→ Building Next.js (standalone output)...");
+  execSync("npx next build", {
+    stdio: "inherit",
+    cwd: root,
+    env: { ...process.env, ELECTRON_BUILD: "1" },
+  });
+}
 
 if (!existsSync(standaloneDir)) {
   throw new Error("Standalone output not found at .next/standalone. Check next.config.ts.");
@@ -76,7 +88,7 @@ writeFileSync(
   )
 );
 run(
-  `npx electron-rebuild --module-dir "${stagingDir}" --only better-sqlite3 --force --build-from-source --version 44.4.1`
+  `npx electron-rebuild --module-dir "${stagingDir}" --only better-sqlite3 --force --build-from-source --version 44.4.1 --arch ${arch}`
 );
 
 const rebuiltBinary = path.join(
@@ -91,6 +103,15 @@ if (!existsSync(rebuiltBinary)) {
   throw new Error(`Expected a freshly compiled binary at ${rebuiltBinary} but found none.`);
 }
 
+// Fail loudly if the compiled binary is for the wrong chip; a mismatched native module only shows
+// up as a crash on the customer's Mac.
+const fileInfo = execSync(`file "${rebuiltBinary}"`).toString();
+const expected = arch === "arm64" ? "arm64" : "x86_64";
+if (!fileInfo.includes(expected)) {
+  throw new Error(`Expected a ${expected} binary but got: ${fileInfo.trim()}`);
+}
+console.log(`✓ better-sqlite3 compiled for ${expected}`);
+
 console.log("→ Swapping the Electron-built binary into the standalone bundle...");
 const targetModuleDir = path.join(standaloneDir, "node_modules", "better-sqlite3");
 rmSync(targetModuleDir, { recursive: true, force: true });
@@ -98,6 +119,24 @@ cpSync(path.join(stagingDir, "node_modules", "better-sqlite3"), targetModuleDir,
   recursive: true,
 });
 rmSync(stagingDir, { recursive: true, force: true });
+
+// Keep only what better-sqlite3 needs at runtime: its JS, package.json and the compiled addon. The
+// rest (C sources, object files, makefiles, prebuilds) differs per chip and is dead weight, and
+// leftover per-chip files would stop the arm64 and x64 apps from being merged into one universal app.
+{
+  const keep = new Set(["lib", "package.json", "build"]);
+  for (const entry of readdirSync(targetModuleDir)) {
+    if (!keep.has(entry)) rmSync(path.join(targetModuleDir, entry), { recursive: true, force: true });
+  }
+  const buildDir = path.join(targetModuleDir, "build");
+  for (const entry of readdirSync(buildDir)) {
+    if (entry !== "Release") rmSync(path.join(buildDir, entry), { recursive: true, force: true });
+  }
+  const releaseDir = path.join(buildDir, "Release");
+  for (const entry of readdirSync(releaseDir)) {
+    if (entry !== "better_sqlite3.node") rmSync(path.join(releaseDir, entry), { recursive: true, force: true });
+  }
+}
 
 // Turbopack's `serverExternalPackages` output (.next/node_modules/<pkg>-<hash>)
 // is a SYMLINK back to the absolute build-time path. It does not survive
@@ -110,12 +149,29 @@ if (existsSync(externalModulesDir)) {
   console.log("→ Resolving externalized native module symlinks into real copies...");
   for (const entry of readdirSync(externalModulesDir)) {
     const entryPath = path.join(externalModulesDir, entry);
-    if (!lstatSync(entryPath).isSymbolicLink()) continue;
-    const realTarget = realpathSync(entryPath);
+    const isSymlink = lstatSync(entryPath).isSymbolicLink();
+    // A second architecture pass finds real copies left by the first pass; always refresh those
+    // from the module just built so a stale binary for the other chip can never ship.
+    if (!isSymlink && !entry.startsWith("better-sqlite3")) continue;
+    const realTarget = entry.startsWith("better-sqlite3") ? targetModuleDir : realpathSync(entryPath);
     console.log(`  ${entry} -> ${realTarget}`);
-    rmSync(entryPath, { force: true });
+    rmSync(entryPath, { recursive: true, force: true });
     cpSync(realTarget, entryPath, { recursive: true, dereference: true });
   }
 }
+
+// Last line of defence: every compiled binary in the bundle must match the target chip. A stray
+// binary for the other architecture (for example sharp, pulled in from the build machine) would
+// crash or be dead weight on the customer's Mac.
+console.log(`→ Checking every native binary is ${expected}...`);
+const wrong = execSync(
+  `find "${standaloneDir}" -type f \\( -name "*.node" -o -name "*.dylib" -o -perm -u+x \\) -print0 | xargs -0 file 2>/dev/null | grep "Mach-O" | grep -v "${expected}" || true`
+)
+  .toString()
+  .trim();
+if (wrong) {
+  throw new Error(`Found binaries that are not ${expected}:\n${wrong}`);
+}
+console.log("✓ All native binaries match the target architecture");
 
 console.log("✓ Electron app resources ready in .next/standalone");

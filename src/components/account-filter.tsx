@@ -46,6 +46,9 @@ export function AccountFilter({ accounts }: { accounts: Account[] }) {
     applySelection(accounts.map((a) => a.id));
   }
 
+  // Backtests aren't tied to trading accounts, so the account filter has no meaning there.
+  if (pathname.startsWith("/backtest")) return null;
+
   const allSelected = selected.length === accounts.length;
   const label = allSelected
     ? "All accounts"

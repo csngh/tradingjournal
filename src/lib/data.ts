@@ -1,7 +1,7 @@
 import { db } from "@/db";
-import { accounts, appSettings, tags, trades } from "@/db/schema";
-import { asc, eq, inArray } from "drizzle-orm";
-import type { Account, AppSettings, Tag, Trade } from "@/db/schema";
+import { accounts, appSettings, backtestTrades, strategies, tags, trades } from "@/db/schema";
+import { asc, eq, inArray, sql } from "drizzle-orm";
+import type { Account, AppSettings, BacktestTrade, Strategy, Tag, Trade } from "@/db/schema";
 import { getSystemTimezone } from "@/lib/timezone";
 
 export async function getAllAccounts(): Promise<Account[]> {
@@ -46,4 +46,25 @@ export async function getAppSettings(): Promise<AppSettings> {
 export async function getTimezone(): Promise<string> {
   const settings = await getAppSettings();
   return settings.timezone;
+}
+
+export async function getAllStrategies(): Promise<Strategy[]> {
+  return db.select().from(strategies).orderBy(asc(strategies.createdAt));
+}
+
+export async function getStrategy(id: string): Promise<Strategy | null> {
+  const [row] = await db.select().from(strategies).where(eq(strategies.id, id));
+  return row ?? null;
+}
+
+export async function getBacktestTrades(strategyId: string): Promise<BacktestTrade[]> {
+  return db
+    .select()
+    .from(backtestTrades)
+    .where(eq(backtestTrades.strategyId, strategyId))
+    .orderBy(asc(backtestTrades.entryTime), asc(backtestTrades.createdAt), sql`rowid`);
+}
+
+export async function getAllBacktestTrades(): Promise<BacktestTrade[]> {
+  return db.select().from(backtestTrades).orderBy(asc(backtestTrades.entryTime), asc(backtestTrades.createdAt), sql`rowid`);
 }

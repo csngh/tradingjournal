@@ -91,6 +91,70 @@ export const appSettings = sqliteTable("app_settings", {
     .default(sql`(current_timestamp)`),
 });
 
+export const strategies = sqliteTable("strategies", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  color: text("color").notNull().default("#d4af37"),
+
+  symbol: text("symbol").notNull(),
+  timeframe: text("timeframe").notNull(),
+  pointValue: real("point_value").notNull(),
+  contracts: integer("contracts").notNull().default(1),
+  /** Fixed take-profit size. Left null when the strategy is defined by `rr` instead. */
+  tpPoints: real("tp_points"),
+  /** Fixed stop size, or the typical risk per trade when the strategy is defined by `rr`. */
+  slPoints: real("sl_points"),
+  /** Reward-to-risk multiple (2 means 1:2). When set, it replaces the fixed take-profit points. */
+  rr: real("rr"),
+  maxTradesPerDay: integer("max_trades_per_day"),
+  feePerContract: real("fee_per_contract").notNull().default(0),
+  startingCapital: real("starting_capital").notNull().default(0),
+  notes: text("notes"),
+
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
+export const backtestTrades = sqliteTable("backtest_trades", {
+  id: text("id").primaryKey(),
+  strategyId: text("strategy_id")
+    .notNull()
+    .references(() => strategies.id, { onDelete: "cascade" }),
+
+  side: text("side", { enum: ["LONG", "SHORT"] }).notNull(),
+  /** Always holds a date; when `hasEntryTime` is false the clock part is a placeholder (noon) and must be ignored. */
+  entryTime: text("entry_time").notNull(),
+  hasEntryTime: integer("has_entry_time", { mode: "boolean" }).notNull().default(true),
+  contracts: integer("contracts").notNull(),
+  /** Signed points per contract (gross, before fees). */
+  points: real("points").notNull(),
+  fees: real("fees").notNull().default(0),
+  exitReason: text("exit_reason", { enum: ["TP", "SL", "BE", "MANUAL"] }).notNull().default("MANUAL"),
+  /** For breakeven trades only: whether the trade would ultimately have been a win or a loss. Analytics only. */
+  beOutcome: text("be_outcome", { enum: ["WIN", "LOSS"] }),
+  notes: text("notes"),
+
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
+export const strategiesRelations = relations(strategies, ({ many }) => ({
+  trades: many(backtestTrades),
+}));
+
+export const backtestTradesRelations = relations(backtestTrades, ({ one }) => ({
+  strategy: one(strategies, {
+    fields: [backtestTrades.strategyId],
+    references: [strategies.id],
+  }),
+}));
+
 export const accountsRelations = relations(accounts, ({ one, many }) => ({
   master: one(accounts, {
     fields: [accounts.masterId],
@@ -122,4 +186,8 @@ export type Trade = typeof trades.$inferSelect;
 export type NewTrade = typeof trades.$inferInsert;
 export type Tag = typeof tags.$inferSelect;
 export type NewTag = typeof tags.$inferInsert;
+export type Strategy = typeof strategies.$inferSelect;
+export type NewStrategy = typeof strategies.$inferInsert;
+export type BacktestTrade = typeof backtestTrades.$inferSelect;
+export type NewBacktestTrade = typeof backtestTrades.$inferInsert;
 export type AppSettings = typeof appSettings.$inferSelect;

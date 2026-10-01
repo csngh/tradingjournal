@@ -1,0 +1,1 @@
+ALTER TABLE `backtest_trades` ADD `has_entry_time` integer DEFAULT true NOT NULL;
