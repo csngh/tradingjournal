@@ -55,8 +55,7 @@ export function UnlockForm() {
       }
     } catch {
       // The IPC call itself failed (e.g. the main process couldn't set the cookie after a
-      // successful Touch ID check) — without this, the busy state would just clear with no
-      // explanation and the person would have no idea what to do next.
+      // successful Touch ID check). Without this, the busy state would clear with no explanation.
       setTouchIDError("Something went wrong unlocking with Touch ID. Try the password instead.");
     } finally {
       touchIDInFlight.current = false;

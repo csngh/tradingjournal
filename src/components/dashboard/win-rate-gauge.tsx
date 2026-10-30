@@ -93,7 +93,7 @@ export function WinRateGauge({
           textAnchor="middle"
           className="fill-[var(--text)] text-[16px] font-semibold"
         >
-          {total ? `${winRate.toFixed(2)}%` : "—"}
+          {total ? `${winRate.toFixed(2)}%` : "-"}
         </text>
       </svg>
 

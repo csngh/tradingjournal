@@ -70,7 +70,7 @@ export function StatsGrid({
                   : toneClass(stats.profitFactor - 1)
               }`}
             >
-              {stats.profitFactor == null ? "—" : stats.profitFactor.toFixed(2)}
+              {stats.profitFactor == null ? "-" : stats.profitFactor.toFixed(2)}
             </div>
             <div className={subClass}>
               {formatCurrency(stats.grossWinAmount)} won /{" "}
@@ -87,7 +87,7 @@ export function StatsGrid({
         hint="Average net profit or loss you can expect from each trade you take."
       >
         <div className={`${valueClass} ${toneClass(stats.expectancy)}`}>
-          {hasTrades ? signedCurrency(stats.expectancy) : "—"}
+          {hasTrades ? signedCurrency(stats.expectancy) : "-"}
         </div>
         <div className={subClass}>
           per trade across {stats.totalTrades} trade{stats.totalTrades === 1 ? "" : "s"}
@@ -101,7 +101,7 @@ export function StatsGrid({
       >
         <div className="flex items-baseline justify-between gap-2">
           <span className={`${valueClass} text-[var(--text)]`}>
-            {winLossRatio == null ? "—" : winLossRatio.toFixed(2)}
+            {winLossRatio == null ? "-" : winLossRatio.toFixed(2)}
           </span>
           <span className="text-xs text-[var(--text-muted)]">ratio</span>
         </div>
@@ -128,7 +128,7 @@ export function StatsGrid({
         <div className="flex items-center justify-between gap-3">
           <div>
             <div className={`${valueClass} ${toneClass(trueNetPnl)}`}>
-              {equityValues.length > 1 ? signedCurrency(trueNetPnl) : "—"}
+              {equityValues.length > 1 ? signedCurrency(trueNetPnl) : "-"}
             </div>
             <div className={subClass}>{formatCurrency(trueTotalFees)} in fees</div>
           </div>

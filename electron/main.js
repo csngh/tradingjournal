@@ -7,7 +7,7 @@ const APP_NAME = "Gringotts Trading Journal";
 
 // Must stay identical to SESSION_COOKIE_NAME/SESSION_TOKEN in src/lib/session.ts. Duplicated
 // rather than shared because this file is plain Node, loaded directly by Electron with no build
-// step, while src/lib/session.ts is bundled as part of the Next.js app — there's no single module
+// step, while src/lib/session.ts is bundled as part of the Next.js app. There's no single module
 // both sides can import without a cross-directory build hack for two short string constants.
 const SESSION_COOKIE_NAME = "gtj_session";
 const SESSION_TOKEN = "49d2d45413262f96dea94cd0143813ace2d19fe7cb94e4382411fd071042a71e";
@@ -15,9 +15,9 @@ const SESSION_TOKEN = "49d2d45413262f96dea94cd0143813ace2d19fe7cb94e4382411fd071
 // Without this, launching the app a second time (double-clicking it again in Finder/Launchpad,
 // Spotlight, etc.) while it's already running spawns a whole separate OS process. That second
 // process would start its OWN server on its OWN port and open its OWN connection to the SAME
-// SQLite file as the first — two windows silently editing the same database from two unrelated
-// server instances, each unaware of the other's writes until a manual refresh, and a real (if rare)
-// risk of "database is locked" under concurrent writes. Must be requested before anything else.
+// SQLite file as the first: two windows silently editing the same database from two unrelated
+// server instances, each unaware of the other's writes, and a real risk of "database is locked"
+// under concurrent writes. Must be requested before anything else.
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) {
   // Another instance already holds the lock and will receive our "second-instance" event below;
@@ -74,11 +74,11 @@ function appResourcesDir() {
     : path.join(__dirname, "..", ".next", "standalone");
 }
 
-// The standalone server.js starts listening as a side effect of being `require()`'d — but Node
+// The standalone server.js starts listening as a side effect of being `require()`'d, but Node
 // caches modules by resolved path, so a second `require()` is a silent no-op: it does NOT start a
 // second listener. Closing the window on macOS (the app stays running, as apps normally do) and
 // then reopening it from the Dock used to call this per window, picking a *new* free port each
-// time and waiting for *that* port to answer — which nothing ever did, since the real server was
+// time and waiting for *that* port to answer, which nothing ever did, since the real server was
 // still on the original port. That wait silently timed out and the window never reappeared. Fixed
 // by starting the server at most once per app launch and handing every window the same port.
 let serverPortPromise = null;
@@ -152,7 +152,7 @@ function focusExistingWindow() {
 // Touch ID is invoked here in the main process, never in the renderer: only native code can reach
 // the Secure Enclave, and `contextIsolation` deliberately keeps the web page from touching Electron
 // or Node APIs directly (see preload.js). A successful prompt proves the person at the keyboard is
-// enrolled on this Mac — it isn't a password, so it can't be "decrypted" into one. Instead, on
+// enrolled on this Mac. It isn't a password, so it can't be "decrypted" into one. Instead, on
 // success, the main process sets the exact same session cookie the password flow sets after a
 // correct `verifyPassword()` call, directly through Electron's session API, with no extra HTTP
 // endpoint added for it. There is deliberately no way to set this cookie except: (a) the password
@@ -160,10 +160,10 @@ function focusExistingWindow() {
 //
 // `ipcMain.handle` alone doesn't check WHO is calling: any frame with the preload script attached
 // could invoke this channel. This app never navigates anywhere outside its own local server today,
-// so there is nothing else that could call it — but this capability can mint a valid session, so
+// so there is nothing else that could call it, but this capability can mint a valid session, so
 // it's checked explicitly anyway rather than relying on "nothing else happens to be able to reach
 // it" as the only guard. Checked against the EXACT port this app's own server resolved to, not just
-// the 127.0.0.1 hostname — a loopback-hostname-only check would equally accept any other local
+// the 127.0.0.1 hostname: a loopback-hostname-only check would equally accept any other local
 // server a future change might ever navigate this window to.
 async function callerIsOurOwnServer(event) {
   try {
@@ -189,7 +189,7 @@ ipcMain.handle("touch-id:unlock", async (event) => {
   try {
     await systemPreferences.promptTouchID(`unlock ${APP_NAME}`);
   } catch {
-    // Cancelled, failed, or no fingerprint enrolled — the password field stays available either way.
+    // Cancelled, failed, or no fingerprint enrolled. The password field stays available either way.
     return { ok: false, error: "Touch ID didn't succeed." };
   }
 

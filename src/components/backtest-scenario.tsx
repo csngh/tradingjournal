@@ -35,9 +35,10 @@ export function BacktestScenarioBar({
   const symbol = scenario.symbol ?? strategy.symbol;
   const known = findFuturesSymbol(symbol);
   const pointValue = scenario.pointValue ?? strategy.pointValue;
+  const feePerContract = scenario.feePerContract ?? strategy.feePerContract;
   const viewStrategy = useMemo(
-    () => ({ ...strategy, symbol, pointValue }),
-    [strategy, symbol, pointValue]
+    () => ({ ...strategy, symbol, pointValue, feePerContract }),
+    [strategy, symbol, pointValue, feePerContract]
   );
 
   function handleSymbol(raw: string) {
@@ -60,6 +61,11 @@ export function BacktestScenarioBar({
     onChange({ ...scenario, contracts: n });
   }
 
+  function handleFeePerContract(raw: string) {
+    const n = Number(raw);
+    onChange({ ...scenario, feePerContract: raw !== "" && Number.isFinite(n) && n >= 0 ? n : null });
+  }
+
   const sizes = useMemo(() => {
     const set = new Set(QUICK_SIZES);
     if (scenario.contracts != null) set.add(scenario.contracts);
@@ -67,8 +73,11 @@ export function BacktestScenarioBar({
   }, [scenario.contracts]);
 
   const rows = useMemo(
-    () => (showCompare ? compareSizes(viewStrategy, trades, sizes, timeZone, countBreakeven) : []),
-    [showCompare, viewStrategy, trades, sizes, timeZone, countBreakeven]
+    () =>
+      showCompare
+        ? compareSizes(viewStrategy, trades, sizes, timeZone, countBreakeven, scenario.feePerContract)
+        : [],
+    [showCompare, viewStrategy, trades, sizes, timeZone, countBreakeven, scenario.feePerContract]
   );
 
   const chip = (selected: boolean) =>
@@ -87,8 +96,8 @@ export function BacktestScenarioBar({
             What-if view
           </h3>
           <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-            See the same backtest with another symbol or size. Points stay as logged; only the dollar figures change.
-            Nothing is saved.
+            See the same backtest with another symbol, size, or fee per contract. Points stay as logged; only the
+            dollar figures change. Nothing is saved.
           </p>
         </div>
         {active && (
@@ -99,7 +108,7 @@ export function BacktestScenarioBar({
         )}
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5">
         <div>
           <label className={labelClass}>Symbol</label>
           <input
@@ -144,6 +153,18 @@ export function BacktestScenarioBar({
             placeholder="As logged"
           />
         </div>
+        <div>
+          <label className={labelClass}>Fee / contract ($)</label>
+          <input
+            type="number"
+            min="0"
+            step="any"
+            className={inputClass}
+            value={scenario.feePerContract ?? ""}
+            onChange={(e) => handleFeePerContract(e.target.value)}
+            placeholder={`As logged (${formatCurrency(strategy.feePerContract)})`}
+          />
+        </div>
         <div className="col-span-2 md:col-span-1">
           <label className={labelClass}>Quick size</label>
           <div className="flex flex-wrap gap-1.5">
@@ -163,6 +184,12 @@ export function BacktestScenarioBar({
         <p className="mt-3 rounded-xl border border-[var(--accent)]/40 px-3.5 py-2.5 text-xs text-[var(--text)] [background-image:var(--gradient-accent-soft)]">
           Showing <b>{symbol}</b> ({formatCurrency(pointValue)} per point) at{" "}
           <b>{scenario.contracts != null ? `${scenario.contracts} contract${scenario.contracts === 1 ? "" : "s"}` : "the sizes you logged"}</b>
+          {scenario.feePerContract != null && (
+            <>
+              {" "}
+              with <b>{formatCurrency(scenario.feePerContract)}</b> in fees per contract
+            </>
+          )}
           . Every dollar figure on this page, in Trades and Analysis, uses this view. Editing a trade still opens what
           you actually saved.
         </p>
@@ -226,8 +253,10 @@ export function BacktestScenarioBar({
             </tbody>
           </table>
           <p className="mt-2 text-[11px] text-[var(--text-muted)]">
-            Click a row to apply that size. Fees scale with size using each trade&apos;s own per-contract fee, and
-            breakeven trades keep paying theirs.
+            Click a row to apply that size.{" "}
+            {scenario.feePerContract != null
+              ? `Priced at ${formatCurrency(scenario.feePerContract)} per contract, including breakeven trades.`
+              : "Fees scale with size using each trade's own per-contract fee, and breakeven trades keep paying theirs."}
           </p>
         </div>
       )}

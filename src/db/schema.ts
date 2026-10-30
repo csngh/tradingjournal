@@ -85,6 +85,8 @@ export const appSettings = sqliteTable("app_settings", {
   id: integer("id").primaryKey(),
   timezone: text("timezone").notNull().default("UTC"),
   countBreakeven: integer("count_breakeven", { mode: "boolean" }).notNull().default(true),
+  /** When true, a breakeven trade is skipped over for win/loss streak purposes instead of ending the streak. */
+  breakevenContinuesStreak: integer("breakeven_continues_streak", { mode: "boolean" }).notNull().default(true),
 
   updatedAt: text("updated_at")
     .notNull()
@@ -137,6 +139,8 @@ export const backtestTrades = sqliteTable("backtest_trades", {
   exitReason: text("exit_reason", { enum: ["TP", "SL", "BE", "MANUAL"] }).notNull().default("MANUAL"),
   /** For breakeven trades only: whether the trade would ultimately have been a win or a loss. Analytics only. */
   beOutcome: text("be_outcome", { enum: ["WIN", "LOSS"] }),
+  /** Average True Range at entry, as the user read it off their chart. Optional, informational. */
+  atr: real("atr"),
   notes: text("notes"),
 
   createdAt: text("created_at")

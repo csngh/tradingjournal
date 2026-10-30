@@ -5,18 +5,7 @@ import { Database, Download, Upload, AlertTriangle } from "lucide-react";
 import { exportAllData, importAllData } from "@/app/actions";
 import { primaryButtonClass, secondaryButtonClass } from "@/components/ui/form";
 import { BACKTEST_ENABLED } from "@/lib/features";
-
-function downloadJson(filename: string, data: unknown) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
+import { downloadJson } from "@/lib/csv";
 
 const MAX_ERRORS_SHOWN = 15;
 

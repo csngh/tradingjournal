@@ -44,14 +44,14 @@ export function TradesSummary({
       <Stat label="Wins" value={String(stats.wins)} tone="profit" />
       <Stat label="Losses" value={String(stats.losses)} tone="loss" />
       <Stat label="Breakevens" value={String(trueScratches)} tone="gold" />
-      <Stat label="Win rate" value={hasTrades ? `${stats.winRate.toFixed(2)}%` : "—"} />
+      <Stat label="Win rate" value={hasTrades ? `${stats.winRate.toFixed(2)}%` : "-"} />
       <Stat
         label="Net P&L"
         value={`${netSign}${formatCurrency(Math.abs(trueNetPnl))}`}
         tone={trueNetPnl >= 0 ? "profit" : "loss"}
       />
-      <Stat label="Profit factor" value={stats.profitFactor == null ? "—" : stats.profitFactor.toFixed(2)} />
-      <Stat label="Avg win / loss" value={winLossRatio == null ? "—" : winLossRatio.toFixed(2)} />
+      <Stat label="Profit factor" value={stats.profitFactor == null ? "-" : stats.profitFactor.toFixed(2)} />
+      <Stat label="Avg win / loss" value={winLossRatio == null ? "-" : winLossRatio.toFixed(2)} />
     </div>
   );
 }

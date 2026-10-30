@@ -27,7 +27,7 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (color: str
   );
 }
 
-export function TagsManager({ tags }: { tags: Tag[] }) {
+export function TagsManager({ tags, className = "" }: { tags: Tag[]; className?: string }) {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(COLORS[0]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -80,7 +80,7 @@ export function TagsManager({ tags }: { tags: Tag[] }) {
   }
 
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+    <div className={`flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 ${className}`}>
       <h2 className="flex items-center gap-2 text-[17px] font-semibold text-[var(--text)]">
         <TagIcon size={17} className="text-[var(--accent)]" />
         Tags
@@ -89,7 +89,7 @@ export function TagsManager({ tags }: { tags: Tag[] }) {
         Manage the tags available when logging a trade. Each trade can carry at most one tag.
       </p>
 
-      <div className="mt-3 flex max-h-[120px] flex-col gap-2 overflow-y-auto pr-1">
+      <div className="mt-3 flex min-h-[120px] flex-1 flex-col gap-2 overflow-y-auto pr-1">
         {tags.map((tag) =>
           editingId === tag.id ? (
             <form

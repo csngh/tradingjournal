@@ -90,13 +90,9 @@ export function TradesClient({
     });
   }, [trades, filters, timeZone]);
 
-  const metricsTrades = useMemo(
-    () => (countBreakeven ? filteredTrades : filteredTrades.filter((t) => !t.isBreakeven)),
-    [filteredTrades, countBreakeven]
-  );
   const filteredStats = useMemo(
-    () => computeTradeStats(metricsTrades, timeZone),
-    [metricsTrades, timeZone]
+    () => computeTradeStats(filteredTrades, timeZone, countBreakeven),
+    [filteredTrades, timeZone, countBreakeven]
   );
   const trueFilteredStats = useMemo(
     () => computeTradeStats(filteredTrades, timeZone),
@@ -204,7 +200,7 @@ export function TradesClient({
                       <td className="whitespace-nowrap px-4 py-3">
                         <span className="flex items-center gap-1.5">
                           <span className="h-1.5 w-1.5 rounded-full" style={{ background: account?.color }} />
-                          {account?.name ?? "—"}
+                          {account?.name ?? "-"}
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-[var(--text-muted)]">
@@ -221,7 +217,7 @@ export function TradesClient({
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3">
-                        {tag ? <TagPill tag={tag} /> : <span className="text-[var(--text-faint)]">—</span>}
+                        {tag ? <TagPill tag={tag} /> : <span className="text-[var(--text-faint)]">-</span>}
                       </td>
                       <td className="px-4 py-3 text-[var(--text-muted)]">{t.timeframe}</td>
                       <td className="px-4 py-3 text-right tabular">{t.contracts}</td>

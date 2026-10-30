@@ -19,6 +19,7 @@ export default async function SettingsPage() {
         currentTimezone={settings.timezone}
         timezones={timezones}
         currentCountBreakeven={settings.countBreakeven}
+        currentBreakevenContinuesStreak={settings.breakevenContinuesStreak}
         tags={tags}
       />
     </div>

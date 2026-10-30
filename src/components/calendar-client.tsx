@@ -13,7 +13,7 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import { ChevronDown, ChevronLeft, ChevronRight, PlusCircle, TrendingUp, TrendingDown, Minus, X, CalendarDays } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, PlusCircle, TrendingUp, TrendingDown, Minus, X, CalendarDays, LayoutGrid, List as ListIcon } from "lucide-react";
 import { formatCurrency } from "@/lib/metrics";
 import { zonedDayKey } from "@/lib/timezone";
 import { Badge } from "@/components/ui/badge";
@@ -51,6 +51,7 @@ export function CalendarClient({
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Trade | null>(null);
   const [formKey, setFormKey] = useState(0);
+  const [view, setView] = useState<"grid" | "list">("grid");
 
   const byDay = useMemo(() => {
     const map = new Map<string, Trade[]>();
@@ -111,6 +112,21 @@ export function CalendarClient({
   const monthTrades = trades.filter((t) => zonedDayKey(t.exitTime, timeZone).startsWith(monthParam));
   const monthPnl = monthTrades.reduce((s, t) => s + (t.pnl - t.fees), 0);
 
+  // List view: every day in the month that has trades, oldest first, with a running month-to-date total.
+  const listDaysBase = eachDayOfInterval({ start: startOfMonth(monthDate), end: endOfMonth(monthDate) })
+    .map((d) => format(d, "yyyy-MM-dd"))
+    .filter((key) => (byDay.get(key) ?? []).length > 0)
+    .map((key) => {
+      const dayTrades = byDay.get(key) ?? [];
+      const net = dayTrades.reduce((s, t) => s + (t.pnl - t.fees), 0);
+      const wins = dayTrades.filter((t) => !t.isBreakeven && t.pnl - t.fees > 0).length;
+      const losses = dayTrades.filter((t) => !t.isBreakeven && t.pnl - t.fees < 0).length;
+      return { key, trades: dayTrades.length, wins, losses, breakevens: dayTrades.length - wins - losses, net };
+    });
+  const listDays = listDaysBase.map((d, i) => ({
+    ...d,
+    cumulative: listDaysBase.slice(0, i + 1).reduce((s, x) => s + x.net, 0),
+  }));
   return (
     <div className="flex h-full flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 md:p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -134,6 +150,26 @@ export function CalendarClient({
           )}
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex gap-0.5 rounded-full border border-[var(--border)] p-0.5">
+            <button
+              onClick={() => setView("grid")}
+              title="Grid view"
+              className={`flex h-7 w-7 items-center justify-center rounded-full transition cursor-pointer ${
+                view === "grid" ? "[background-image:var(--gradient-accent-soft)] text-[var(--accent)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"
+              }`}
+            >
+              <LayoutGrid size={14} />
+            </button>
+            <button
+              onClick={() => setView("list")}
+              title="List view"
+              className={`flex h-7 w-7 items-center justify-center rounded-full transition cursor-pointer ${
+                view === "list" ? "[background-image:var(--gradient-accent-soft)] text-[var(--accent)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"
+              }`}
+            >
+              <ListIcon size={14} />
+            </button>
+          </div>
           {!isCurrentMonth && (
             <button
               onClick={() => goToMonth(new Date(now.getFullYear(), now.getMonth(), 1))}
@@ -192,6 +228,83 @@ export function CalendarClient({
         </div>
       </div>
 
+      {view === "list" ? (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {listDays.length === 0 ? (
+            <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+              <CalendarDays size={28} className="text-[var(--text-faint)]" />
+              <p className="text-sm text-[var(--text-muted)]">No trades logged this month.</p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[var(--border)] text-left text-xs font-medium text-[var(--text-muted)]">
+                      <th className="px-4 py-3">Date</th>
+                      <th className="px-4 py-3 text-right">Trades</th>
+                      <th className="px-4 py-3 text-right">Wins</th>
+                      <th className="px-4 py-3 text-right">Losses</th>
+                      <th className="px-4 py-3 text-right">BEs</th>
+                      <th className="px-4 py-3 text-right">Day P&amp;L</th>
+                      <th className="px-4 py-3 text-right">Cumulative</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {listDays.map((d) => {
+                      const date = parseISO(`${d.key}T00:00:00`);
+                      const today = isToday(date);
+                      return (
+                        <tr
+                          key={d.key}
+                          onClick={() => setSelectedDay(d.key)}
+                          className="cursor-pointer border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)]"
+                        >
+                          <td className="whitespace-nowrap px-4 py-3">
+                            <span className={`font-medium ${today ? "text-[var(--accent)]" : "text-[var(--text)]"}`}>
+                              {format(date, "MMM dd")}
+                            </span>
+                            <span className="ml-1.5 text-xs text-[var(--text-muted)]">{format(date, "EEE")}</span>
+                          </td>
+                          <td className="px-4 py-3 text-right tabular text-[var(--text-muted)]">{d.trades}</td>
+                          <td className="px-4 py-3 text-right tabular font-medium text-[var(--profit)]">
+                            {d.wins || <span className="text-[var(--text-faint)]">-</span>}
+                          </td>
+                          <td className="px-4 py-3 text-right tabular font-medium text-[var(--loss)]">
+                            {d.losses || <span className="text-[var(--text-faint)]">-</span>}
+                          </td>
+                          <td className="px-4 py-3 text-right tabular font-medium text-[var(--accent)]">
+                            {d.breakevens || <span className="text-[var(--text-faint)]">-</span>}
+                          </td>
+                          <td
+                            className={`px-4 py-3 text-right tabular font-semibold ${
+                              d.net >= 0 ? "text-[var(--profit)]" : "text-[var(--loss)]"
+                            }`}
+                          >
+                            <span className="flex items-center justify-end gap-1">
+                              {d.net >= 0 ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
+                              {d.net >= 0 ? "+" : ""}
+                              {formatCurrency(d.net)}
+                            </span>
+                          </td>
+                          <td
+                            className={`px-4 py-3 text-right tabular ${
+                              d.cumulative >= 0 ? "text-[var(--text-muted)]" : "text-[var(--loss)]"
+                            }`}
+                          >
+                            {d.cumulative >= 0 ? "+" : ""}
+                            {formatCurrency(d.cumulative)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="mb-2 flex shrink-0 gap-4 md:gap-6">
           <div className="grid flex-1 grid-cols-7 gap-1.5 md:gap-2">
@@ -318,6 +431,7 @@ export function CalendarClient({
           </div>
         </div>
       </div>
+      )}
 
       {selectedDay && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm md:items-center" onClick={() => setSelectedDay(null)}>

@@ -200,7 +200,12 @@ export type StreakInfo = {
   maxLoss: number;
 };
 
-function streaksFrom(values: number[]): StreakInfo {
+/**
+ * `breakevenContinuesStreak` mirrors the Settings toggle shared with Backtest: when true, a
+ * breakeven (value 0) is skipped over mid-streak instead of ending it, since no money was
+ * actually won or lost on it.
+ */
+function streaksFrom(values: number[], breakevenContinuesStreak: boolean): StreakInfo {
   let maxWin = 0;
   let maxLoss = 0;
   let runWin = 0;
@@ -214,15 +219,20 @@ function streaksFrom(values: number[]): StreakInfo {
       runLoss += 1;
       runWin = 0;
       maxLoss = Math.max(maxLoss, runLoss);
-    } else {
+    } else if (!breakevenContinuesStreak) {
       runWin = 0;
       runLoss = 0;
     }
+    // else: n === 0 and breakevenContinuesStreak — skipped over, leaving the running streak as-is.
   }
 
   let current = 0;
   for (let i = values.length - 1; i >= 0; i--) {
     const n = values[i];
+    if (n === 0) {
+      if (breakevenContinuesStreak) continue;
+      break;
+    }
     if (n > 0 && current >= 0) current++;
     else if (n < 0 && current <= 0) current--;
     else break;
@@ -231,15 +241,37 @@ function streaksFrom(values: number[]): StreakInfo {
   return { current, maxWin, maxLoss };
 }
 
-/** Streaks measured in trading days rather than individual trades. */
-export function computeDayStreaks(trades: Trade[], timeZone: string): StreakInfo {
+/**
+ * Streaks measured in trading days rather than individual trades. Always uses every trade: a
+ * day's own P&L is a real dollar result, not a trade-quality stat, so `countBreakeven` doesn't
+ * apply here (matching how daily results work in the Backtest section).
+ */
+export function computeDayStreaks(
+  trades: Trade[],
+  timeZone: string,
+  breakevenContinuesStreak = true
+): StreakInfo {
   const dayPnls = [...groupTradesByDay(trades, timeZone).entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([, dayTrades]) => dayTrades.reduce((s, t) => s + netPnl(t), 0));
-  return streaksFrom(dayPnls);
+  return streaksFrom(dayPnls, breakevenContinuesStreak);
 }
 
-export function computeTradeStats(trades: Trade[], timeZone: string): TradeStats {
+/**
+ * `countBreakeven` mirrors the Settings toggle: when false, breakeven trades are left out of
+ * total trades, win rate, and expectancy, same as Backtest. `breakevenContinuesStreak` is a
+ * separate toggle just for streaks. Both are applied without ever filtering trades out of the
+ * underlying array passed to `streaksFrom` — doing that would silently stitch together the
+ * streaks on either side of an excluded breakeven, which is the bug this signature exists to
+ * avoid. Dollar results (`totalPnl`, `totalFees`, `netPnl`, `bestDay`/`worstDay`) always use
+ * every trade regardless of either setting.
+ */
+export function computeTradeStats(
+  trades: Trade[],
+  timeZone: string,
+  countBreakeven = true,
+  breakevenContinuesStreak = true
+): TradeStats {
   const sorted = sortedByExit(trades);
   const nets = sorted.map(netPnl);
   const scratchFlags = sorted.map(isScratchTrade);
@@ -254,12 +286,14 @@ export function computeTradeStats(trades: Trade[], timeZone: string): TradeStats
   const totalPnl = sorted.reduce((s, t) => s + t.pnl, 0);
   const net = totalPnl - totalFees;
 
-  const winRate = sorted.length > 0 ? (wins.length / sorted.length) * 100 : 0;
+  const totalTrades = countBreakeven ? sorted.length : sorted.length - scratches.length;
+  const winRate = totalTrades > 0 ? (wins.length / totalTrades) * 100 : 0;
   const avgWin = wins.length > 0 ? grossWinAmount / wins.length : 0;
   const avgLoss = losses.length > 0 ? grossLossAmount / losses.length : 0;
   const profitFactor =
     grossLossAmount > 0 ? grossWinAmount / grossLossAmount : null;
-  const expectancy = sorted.length > 0 ? net / sorted.length : 0;
+  const metricNet = sorted.reduce((s, t, i) => s + (countBreakeven || !scratchFlags[i] ? netPnl(t) : 0), 0);
+  const expectancy = totalTrades > 0 ? metricNet / totalTrades : 0;
 
   const byDay = groupTradesByDay(sorted, timeZone);
   let bestDay: { date: string; pnl: number } | null = null;
@@ -271,7 +305,7 @@ export function computeTradeStats(trades: Trade[], timeZone: string): TradeStats
   }
 
   const streakValues = nets.map((n, i) => (scratchFlags[i] ? 0 : n));
-  const tradeStreaks = streaksFrom(streakValues);
+  const tradeStreaks = streaksFrom(streakValues, breakevenContinuesStreak);
 
   const avgContractsPerTrade =
     sorted.length > 0
@@ -279,7 +313,7 @@ export function computeTradeStats(trades: Trade[], timeZone: string): TradeStats
       : 0;
 
   return {
-    totalTrades: sorted.length,
+    totalTrades,
     wins: wins.length,
     losses: losses.length,
     scratches: scratches.length,

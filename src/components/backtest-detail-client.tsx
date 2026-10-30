@@ -3,7 +3,7 @@
 import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, BarChart3, ChevronDown, ChevronRight, ClipboardPlus, Download, ListOrdered, Pencil, Upload, Trash2 } from "lucide-react";
+import { ArrowLeft, BarChart3, ChevronDown, ChevronRight, ClipboardPlus, Download, FileJson, ListOrdered, Pencil, Upload, Trash2 } from "lucide-react";
 import { BacktestAnalysisView } from "@/components/backtest-analysis";
 import { BacktestTradeForm } from "@/components/backtest-trade-form";
 import { BacktestImport } from "@/components/backtest-import";
@@ -11,7 +11,7 @@ import { BacktestScenarioBar } from "@/components/backtest-scenario";
 import { StrategyForm } from "@/components/strategy-form";
 import { Badge } from "@/components/ui/badge";
 import { dangerButtonClass, primaryButtonClass, secondaryButtonClass } from "@/components/ui/form";
-import { clearBacktestTrades } from "@/app/actions";
+import { clearBacktestTrades, exportStrategyData } from "@/app/actions";
 import {
   analyzeBacktest,
   applyScenario,
@@ -25,7 +25,7 @@ import {
   type TradeGroupStats,
 } from "@/lib/backtest";
 import { backtestTradesToCsv } from "@/lib/backtest-csv";
-import { downloadCsv } from "@/lib/csv";
+import { downloadCsv, downloadJson } from "@/lib/csv";
 import { formatCurrency } from "@/lib/metrics";
 import { formatZonedDate, formatZonedTime, zonedDayKey } from "@/lib/timezone";
 import type { BacktestTrade, Strategy } from "@/db/schema";
@@ -83,12 +83,14 @@ export function BacktestDetailClient({
   analysis,
   timeZone,
   countBreakeven,
+  breakevenContinuesStreak,
 }: {
   strategy: Strategy;
   trades: BacktestTrade[];
   analysis: BacktestAnalysis;
   timeZone: string;
   countBreakeven: boolean;
+  breakevenContinuesStreak: boolean;
 }) {
   const router = useRouter();
   const rules = strategyRules(strategy);
@@ -99,10 +101,11 @@ export function BacktestDetailClient({
   const [tradeKey, setTradeKey] = useState(0);
   const [editing, setEditing] = useState<BacktestTrade | null>(null);
   const [importOpen, setImportOpen] = useState(false);
-  // Explicit open/closed choices only; anything not listed uses the default (newest month open, all weeks open).
+  // Explicit open/closed choices only; anything not listed defaults to collapsed.
   const [monthOpen, setMonthOpen] = useState<Record<string, boolean>>({});
   const [weekOpen, setWeekOpen] = useState<Record<string, boolean>>({});
   const [confirmClear, setConfirmClear] = useState(false);
+  const [exportingJson, setExportingJson] = useState(false);
   const [scenario, setScenario] = useState<Scenario>(NO_SCENARIO);
 
   // Everything shown (rows, month/week totals, analysis) reads from this view. With no what-if it is
@@ -110,8 +113,11 @@ export function BacktestDetailClient({
   const scenarioOn = isScenarioActive(scenario);
   const view = useMemo(() => applyScenario(strategy, trades, scenario), [strategy, trades, scenario]);
   const viewAnalysis = useMemo(
-    () => (scenarioOn ? analyzeBacktest(view.strategy, view.trades, timeZone, countBreakeven) : analysis),
-    [scenarioOn, view, timeZone, countBreakeven, analysis]
+    () =>
+      scenarioOn
+        ? analyzeBacktest(view.strategy, view.trades, timeZone, countBreakeven, breakevenContinuesStreak)
+        : analysis,
+    [scenarioOn, view, timeZone, countBreakeven, breakevenContinuesStreak, analysis]
   );
 
   const newestFirst = useMemo(() => [...view.trades].reverse(), [view.trades]);
@@ -150,6 +156,18 @@ export function BacktestDetailClient({
     const suffix = scenarioOn ? "-whatif" : "";
     const csv = backtestTradesToCsv(trades, strategy, timeZone, scenarioOn ? view : undefined);
     downloadCsv(`backtest-${safe}${suffix}-${stamp}.csv`, csv);
+  }
+
+  async function handleExportJson() {
+    setExportingJson(true);
+    try {
+      const data = await exportStrategyData(strategy.id);
+      const stamp = new Date().toISOString().slice(0, 10);
+      const safe = strategy.name.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "strategy";
+      downloadJson(`backtest-${safe}-${stamp}.json`, data);
+    } finally {
+      setExportingJson(false);
+    }
   }
 
   function expandAll() {
@@ -215,6 +233,15 @@ export function BacktestDetailClient({
             >
               <Download size={15} />
               Export CSV{scenarioOn ? " (+ what-if)" : ""}
+            </button>
+            <button
+              onClick={handleExportJson}
+              disabled={exportingJson}
+              title="Export this strategy and its trades as a JSON file, for backup or to import elsewhere"
+              className={secondaryButtonClass}
+            >
+              <FileJson size={15} />
+              {exportingJson ? "Exporting…" : "Export JSON"}
             </button>
             <button onClick={openLog} className={primaryButtonClass}>
               <ClipboardPlus size={16} />
@@ -296,7 +323,7 @@ export function BacktestDetailClient({
           </div>
         </div>
       ) : tab === "analysis" ? (
-        <BacktestAnalysisView strategy={view.strategy} analysis={viewAnalysis} />
+        <BacktestAnalysisView strategy={view.strategy} analysis={viewAnalysis} timeZone={timeZone} />
       ) : (
         <div className="flex flex-col gap-3">
           <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
@@ -310,6 +337,7 @@ export function BacktestDetailClient({
                     <th className="px-4 py-3">Side</th>
                     <th className="px-4 py-3 text-right">Qty</th>
                     <th className="px-4 py-3 text-right">Points</th>
+                    <th className="px-4 py-3 text-right">ATR</th>
                     <th className="px-4 py-3">Exit</th>
                     <th className="px-4 py-3 text-right">Fees</th>
                     <th className="px-4 py-3 text-right">Net P&amp;L</th>
@@ -318,29 +346,29 @@ export function BacktestDetailClient({
                   </tr>
                 </thead>
                 <tbody>
-                  {groups.map((m, mi) => {
-                    const mOpen = monthOpen[m.key] ?? mi === 0;
+                  {groups.map((m) => {
+                    const mOpen = monthOpen[m.key] ?? false;
                     return (
                       <Fragment key={m.key}>
                         <tr
                           onClick={() => setMonthOpen((o) => ({ ...o, [m.key]: !mOpen }))}
                           className="cursor-pointer border-b border-[var(--border)] bg-[var(--surface-2)] hover:brightness-110"
                         >
-                          <td colSpan={11} className="px-4 py-3">
+                          <td colSpan={12} className="px-4 py-3">
                             <GroupHeader open={mOpen} label={m.label} stats={m} strong />
                           </td>
                         </tr>
                         {mOpen &&
                           m.weeks.map((w) => {
                             const wKey = `${m.key}|${w.key}`;
-                            const wOpen = weekOpen[wKey] ?? true;
+                            const wOpen = weekOpen[wKey] ?? false;
                             return (
                               <Fragment key={wKey}>
                                 <tr
                                   onClick={() => setWeekOpen((o) => ({ ...o, [wKey]: !wOpen }))}
                                   className="cursor-pointer border-b border-[var(--border)] hover:bg-[var(--surface-2)]"
                                 >
-                                  <td colSpan={11} className="py-2 pl-8 pr-4">
+                                  <td colSpan={12} className="py-2 pl-8 pr-4">
                                     <GroupHeader open={wOpen} label={`Week of ${w.label}`} stats={w} />
                                   </td>
                                 </tr>
@@ -361,7 +389,7 @@ export function BacktestDetailClient({
                                           {t.hasEntryTime ? (
                                             formatZonedTime(t.entryTime, timeZone)
                                           ) : (
-                                            <span className="text-[var(--text-faint)]">—</span>
+                                            <span className="text-[var(--text-faint)]">-</span>
                                           )}
                                         </td>
                                         <td className="px-4 py-3">
@@ -371,6 +399,9 @@ export function BacktestDetailClient({
                                         <td className="px-4 py-3 text-right tabular text-[var(--text-muted)]">
                                           {t.points > 0 ? "+" : ""}
                                           {t.points.toLocaleString()}
+                                        </td>
+                                        <td className="px-4 py-3 text-right tabular text-[var(--text-muted)]">
+                                          {t.atr != null ? t.atr.toLocaleString() : <span className="text-[var(--text-faint)]">-</span>}
                                         </td>
                                         <td className="px-4 py-3">
                                           <Badge

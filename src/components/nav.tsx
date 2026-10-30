@@ -7,7 +7,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Modal } from "@/components/ui/modal";
 import { primaryButtonClass } from "@/components/ui/form";
 import { BACKTEST_ENABLED } from "@/lib/features";
-import { LayoutDashboard, CalendarDays, ListOrdered, Wallet, FlaskConical, Settings, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, CalendarDays, ListOrdered, Wallet, FlaskConical, Target, Layers, Settings, ShieldCheck } from "lucide-react";
 
 type NavLink = { href: string; label: string; icon: typeof LayoutDashboard; soon?: boolean };
 
@@ -18,6 +18,8 @@ const links: NavLink[] = [
   { href: "/trades", label: "Trades", icon: ListOrdered },
   { href: "/accounts", label: "Accounts", icon: Wallet },
   { href: "/backtest", label: "Backtest", icon: FlaskConical, soon: !BACKTEST_ENABLED },
+  { href: "/eval-sim", label: "Eval Sim", icon: Target, soon: !BACKTEST_ENABLED },
+  { href: "/multi-account-sim", label: "Multi-Accounts Sim", icon: Layers, soon: !BACKTEST_ENABLED },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -83,8 +85,8 @@ export function Sidebar() {
               key={link.href}
               href={qs ? `${link.href}?${qs}` : link.href}
               className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${active
-                  ? "[background-image:var(--gradient-accent-soft)] text-[var(--accent)]"
-                  : "text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+                ? "[background-image:var(--gradient-accent-soft)] text-[var(--accent)]"
+                : "text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
                 }`}
             >
               <Icon size={17} />

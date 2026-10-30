@@ -7,6 +7,7 @@ import { accounts, appSettings, backtestTrades, strategies, tags, trades } from 
 import { eq, and, ne } from "drizzle-orm";
 import { getAllAccounts, getAllTags, getFollowers } from "@/lib/data";
 import { validateBackup, validateBacktestBackup, type BackupData, type BacktestBackupData } from "@/lib/backup";
+import { defaultFees } from "@/lib/backtest";
 
 // ---------- Settings ----------
 
@@ -35,6 +36,20 @@ export async function updateCountBreakeven(countBreakeven: boolean) {
     });
 
   revalidatePath("/");
+  revalidatePath("/settings");
+}
+
+export async function updateBreakevenContinuesStreak(breakevenContinuesStreak: boolean) {
+  await db
+    .insert(appSettings)
+    .values({ id: 1, breakevenContinuesStreak })
+    .onConflictDoUpdate({
+      target: appSettings.id,
+      set: { breakevenContinuesStreak, updatedAt: new Date().toISOString() },
+    });
+
+  revalidatePath("/backtest");
+  revalidatePath("/multi-account-sim");
   revalidatePath("/settings");
 }
 
@@ -365,6 +380,8 @@ export type BacktestTradeInput = {
   exitReason: "TP" | "SL" | "BE" | "MANUAL";
   /** Breakeven trades only: would it ultimately have been a win or a loss? Analytics only. */
   beOutcome: "WIN" | "LOSS" | null;
+  /** Average True Range at entry. Optional, informational only. */
+  atr: number | null;
   notes: string | null;
 };
 
@@ -411,6 +428,7 @@ function cleanBacktestTrade(input: BacktestTradeInput): BacktestTradeInput {
     hasEntryTime: input.hasEntryTime !== false,
     contracts: Math.max(1, Math.round(input.contracts) || 1),
     fees: Number.isFinite(input.fees) && input.fees > 0 ? input.fees : 0,
+    atr: positiveOrNull(input.atr ?? null),
     notes: input.notes?.trim() || null,
   };
 }
@@ -466,6 +484,37 @@ export async function clearBacktestTrades(strategyId: string) {
   revalidateBacktest(strategyId);
 }
 
+/**
+ * Reprices every already-logged trade for a strategy to a new contract count and/or fee per
+ * contract. Points are never touched, only the size and the fee depending on it. Each trade's
+ * fee is set from the strategy's current rate, not scaled from its old fee, so trades stay
+ * consistent with the strategy's displayed fee. The user opts into this explicitly; nothing
+ * resizes automatically.
+ */
+export async function bulkResizeBacktestTrades(
+  strategyId: string,
+  newContracts: number,
+  feePerContract: number
+): Promise<{ count: number }> {
+  const size = Math.max(1, Math.round(newContracts) || 1);
+  const targetFee = defaultFees({ feePerContract }, size);
+  const rows = await db.select().from(backtestTrades).where(eq(backtestTrades.strategyId, strategyId));
+  const changed = rows.filter((t) => t.contracts !== size || t.fees !== targetFee);
+  if (changed.length === 0) return { count: 0 };
+
+  db.transaction((tx) => {
+    for (const t of changed) {
+      tx.update(backtestTrades)
+        .set({ contracts: size, fees: targetFee })
+        .where(eq(backtestTrades.id, t.id))
+        .run();
+    }
+  });
+
+  revalidateBacktest(strategyId);
+  return { count: changed.length };
+}
+
 /** Bulk-inserts already-parsed rows in one transaction; rejects the whole batch if any row is invalid. */
 export async function importBacktestTrades(strategyId: string, rows: Omit<BacktestTradeInput, "strategyId">[]) {
   const cleaned = rows.map((r) => cleanBacktestTrade({ ...r, strategyId }));
@@ -487,7 +536,7 @@ const BACKTEST_BACKUP_FORMAT_VERSION = 1;
 
 export type { BacktestBackupData } from "@/lib/backup";
 
-/** Every strategy and every backtest trade, with no accounts/trades/tags/settings — for moving just the Backtest section between devices. */
+/** Every strategy and backtest trade, with no accounts, trades, tags, or settings. For moving just the Backtest section between devices. */
 export async function exportBacktestData(): Promise<BacktestBackupData> {
   const [strategyRows, backtestTradeRows] = await Promise.all([
     db.select().from(strategies),
@@ -520,6 +569,64 @@ export async function importBacktestData(input: unknown): Promise<ImportResult> 
       if (data.backtestTrades.length) {
         for (let i = 0; i < data.backtestTrades.length; i += 200) {
           tx.insert(backtestTrades).values(data.backtestTrades.slice(i, i + 200)).run();
+        }
+      }
+    });
+  } catch (err) {
+    return {
+      ok: false,
+      errors: [err instanceof Error ? err.message : "The database rejected this file."],
+    };
+  }
+
+  revalidateBacktest();
+  return { ok: true };
+}
+
+/** One strategy and only its own trades, in the same shape as the full backtest backup, for sharing or backing up a single strategy. */
+export async function exportStrategyData(strategyId: string): Promise<BacktestBackupData> {
+  const [strategyRows, tradeRows] = await Promise.all([
+    db.select().from(strategies).where(eq(strategies.id, strategyId)),
+    db.select().from(backtestTrades).where(eq(backtestTrades.strategyId, strategyId)),
+  ]);
+  if (!strategyRows[0]) throw new Error("Strategy not found.");
+
+  return {
+    formatVersion: BACKTEST_BACKUP_FORMAT_VERSION,
+    exportedAt: new Date().toISOString(),
+    strategies: strategyRows,
+    backtestTrades: tradeRows,
+  };
+}
+
+/**
+ * Imports every strategy (and its trades) in a backtest backup file as brand-new strategies,
+ * alongside what's already there. Unlike `importBacktestData`, nothing existing is deleted.
+ * Ids from the file are remapped to fresh ones so the same file can be imported more than once
+ * (or a strategy re-imported into the database it came from) without colliding.
+ */
+export async function importStrategiesAsNew(input: unknown): Promise<ImportResult> {
+  const { data, errors } = validateBacktestBackup(input);
+  if (!data) return { ok: false, errors };
+
+  const idMap = new Map<string, string>();
+  const newStrategies = data.strategies.map((s) => {
+    const id = randomUUID();
+    idMap.set(s.id, id);
+    return { ...s, id };
+  });
+  const newTrades = data.backtestTrades.map((t) => ({
+    ...t,
+    id: randomUUID(),
+    strategyId: idMap.get(t.strategyId)!,
+  }));
+
+  try {
+    db.transaction((tx) => {
+      if (newStrategies.length) tx.insert(strategies).values(newStrategies).run();
+      if (newTrades.length) {
+        for (let i = 0; i < newTrades.length; i += 200) {
+          tx.insert(backtestTrades).values(newTrades.slice(i, i + 200)).run();
         }
       }
     });

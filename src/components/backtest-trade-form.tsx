@@ -68,6 +68,7 @@ export function BacktestTradeForm({
   const [fees, setFees] = useState(String(trade?.fees ?? defaultFees(strategy, strategy.contracts)));
   const [feesTouched, setFeesTouched] = useState(!!trade);
   const [beOutcome, setBeOutcome] = useState<"" | "WIN" | "LOSS">(trade?.beOutcome ?? "");
+  const [atr, setAtr] = useState(trade?.atr != null ? String(trade.atr) : "");
   const [notes, setNotes] = useState(trade?.notes ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -122,6 +123,7 @@ export function BacktestTradeForm({
       fees: Number(fees) || 0,
       exitReason,
       beOutcome: exitReason === "BE" && beOutcome ? beOutcome : null,
+      atr: atr.trim() === "" ? null : Number(atr),
       notes: notes || null,
     };
   }
@@ -390,6 +392,21 @@ export function BacktestTradeForm({
               {net >= 0 ? "+" : ""}
               {formatCurrency(net)}
             </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelClass}>ATR (optional)</label>
+            <input
+              type="number"
+              min="0"
+              step="any"
+              className={inputClass}
+              value={atr}
+              onChange={(e) => setAtr(e.target.value)}
+              placeholder="e.g. 42.5"
+            />
           </div>
         </div>
 

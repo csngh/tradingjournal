@@ -55,3 +55,11 @@ next-env.d.ts
 /data/*.db-journal
 /data/*.db-wal
 /data/*.db-shm
+
+# brag video output (renders, plans, compositions, work files)
+/brag-output*/
+
+# agent tooling (installed skills and local Claude Code config)
+/.agents/
+/.claude/
+/skills-lock.json

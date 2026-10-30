@@ -29,9 +29,37 @@ export function backtestNet(t: BacktestTrade, s: Strategy): number {
   return backtestGross(t, s) - t.fees;
 }
 
+/**
+ * Keeps only the trades whose entry falls within ["YYYY-MM-DD", "YYYY-MM-DD"] (inclusive), judged
+ * in the app's configured timezone so it lines up with every other date grouping in the app. Either
+ * bound can be left empty/null for an open-ended range; both empty returns every trade, unfiltered.
+ */
+export function filterTradesByDateRange(
+  trades: BacktestTrade[],
+  timeZone: string,
+  startDate: string | null,
+  endDate: string | null
+): BacktestTrade[] {
+  if (!startDate && !endDate) return trades;
+  return trades.filter((t) => {
+    const day = zonedDayKey(t.entryTime, timeZone);
+    if (startDate && day < startDate) return false;
+    if (endDate && day > endDate) return false;
+    return true;
+  });
+}
+
 /** Default round-trip fees for a trade of this size under the strategy's fee setting. */
 export function defaultFees(s: Pick<Strategy, "feePerContract">, contracts: number): number {
   return Math.round(s.feePerContract * contracts * 100) / 100;
+}
+
+/**
+ * Scales a logged fee from one contract count to another, same formula the what-if size override
+ * uses, so a resized trade's fee moves proportionally instead of staying pinned to the old size.
+ */
+export function scaleFeeForContracts(fee: number, oldContracts: number, newContracts: number): number {
+  return oldContracts > 0 ? (fee * newContracts) / oldContracts : fee;
 }
 
 export type Outcome = "WIN" | "LOSS" | "SCRATCH";
@@ -111,12 +139,15 @@ export type BacktestAnalysis = {
   losingDays: number;
   bestDay: DayRow | null;
   worstDay: DayRow | null;
-  /** Every run of 2 or more losses in a row (a win or breakeven ends the run), longest first. */
+  /** Every run of 2 or more losses in a row, longest first. See `breakevenContinuesStreak`. */
   lossStreaks: StreakRun[];
+  /** Days with 2+ losses back to back within that single day, longest first. Never crosses a day boundary. */
+  sameDayLossStreaks: DayLossStreak[];
   breakevenWinRate: number | null;
   firstTrade: string | null;
   lastTrade: string | null;
-  equity: { index: number; date: string; equity: number; drawdown: number }[];
+  /** `payout` is only ever set by `applyPayoutsToAnalysis` in multi-account-sim.ts; plain backtests never set it. */
+  equity: { index: number; date: string; equity: number; drawdown: number; payout?: number }[];
   days: DayRow[];
   bySide: Bucket[];
   byExit: Bucket[];
@@ -156,11 +187,13 @@ export type StreakRun = {
 };
 
 /**
- * Every maximal run of 2+ consecutive losses, in the given row order (a win or breakeven ends a
- * run — the same rule `streaks()` uses for `maxLossStreak`, so the two stay consistent). A run can
- * span multiple calendar days when nothing broke the streak in between.
+ * Every maximal run of 2+ consecutive losses, in the given row order. A win always ends a run,
+ * the same rule `streaks()` uses for `maxLossStreak`, so the two stay consistent. A breakeven
+ * ends it too unless `breakevenContinuesStreak` is set, in which case it's skipped over (not
+ * added to the run, but doesn't break it either). A run can span multiple calendar days when
+ * nothing broke the streak in between.
  */
-function losingStreakRuns(rows: Row[]): StreakRun[] {
+function losingStreakRuns(rows: Row[], breakevenContinuesStreak: boolean): StreakRun[] {
   const runs: StreakRun[] = [];
   let cur: Row[] = [];
   const flush = () => {
@@ -177,10 +210,57 @@ function losingStreakRuns(rows: Row[]): StreakRun[] {
   };
   for (const r of rows) {
     if (r.outcome === "LOSS") cur.push(r);
+    else if (r.outcome === "SCRATCH" && breakevenContinuesStreak) continue;
     else flush();
   }
   flush();
   return runs.sort((a, b) => b.length - a.length || b.endDate.localeCompare(a.endDate));
+}
+
+export type DayLossStreak = {
+  /** "YYYY-MM-DD" in the app timezone. */
+  day: string;
+  /** Longest run of consecutive losses within just this one day (never crosses into another day). */
+  count: number;
+  /** Net P&L across that run's trades. */
+  net: number;
+};
+
+/**
+ * For each calendar day, the longest run of consecutive losses that happened within that single
+ * day, never looking across a day boundary even when the losses also continue into the next or
+ * previous day. Only days where that same-day run reaches 2+ are returned. This answers "which
+ * days had back-to-back losses", which a cross-day run in `losingStreakRuns` can bury, e.g. a
+ * single loss on day 1 followed by two losses on day 2 reads there as one 3-trade run spanning
+ * both days, with no entry calling out day 2 on its own.
+ */
+function sameDayLossStreaks(rows: Row[], breakevenContinuesStreak: boolean): DayLossStreak[] {
+  const byDay = new Map<string, Row[]>();
+  for (const r of rows) {
+    const arr = byDay.get(r.day) ?? [];
+    arr.push(r);
+    byDay.set(r.day, arr);
+  }
+
+  const out: DayLossStreak[] = [];
+  for (const [day, dayRows] of byDay) {
+    let cur: Row[] = [];
+    let best: Row[] = [];
+    for (const r of dayRows) {
+      if (r.outcome === "LOSS") {
+        cur.push(r);
+        if (cur.length > best.length) best = cur;
+      } else if (r.outcome === "SCRATCH" && breakevenContinuesStreak) {
+        continue;
+      } else {
+        cur = [];
+      }
+    }
+    if (best.length >= 2) {
+      out.push({ day, count: best.length, net: best.reduce((s, r) => s + r.net, 0) });
+    }
+  }
+  return out.sort((a, b) => b.count - a.count || b.day.localeCompare(a.day));
 }
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -255,7 +335,7 @@ function groupBuckets(
     );
 }
 
-function streaks(outcomes: Outcome[]) {
+function streaks(outcomes: Outcome[], breakevenContinuesStreak: boolean) {
   let maxWin = 0;
   let maxLoss = 0;
   let w = 0;
@@ -269,10 +349,11 @@ function streaks(outcomes: Outcome[]) {
       l++;
       w = 0;
       maxLoss = Math.max(maxLoss, l);
-    } else {
+    } else if (!breakevenContinuesStreak) {
       w = 0;
       l = 0;
     }
+    // else: breakeven is skipped over, leaving the running streak untouched.
   }
   return { maxWin, maxLoss };
 }
@@ -313,12 +394,17 @@ function fmtCompact(n: number): string {
  * becomes wins + losses, win rate is wins / (wins + losses), profit factor, expectancy, streaks
  * and the breakdowns). Dollar results always use every trade: net P&L, fees, equity curve,
  * drawdown, daily results and the daily trade limit.
+ *
+ * `breakevenContinuesStreak` is a separate Settings toggle just for win/loss streaks: when true, a
+ * breakeven trade is skipped over mid-streak instead of ending it, since no money was actually won
+ * or lost on it.
  */
 export function analyzeBacktest(
   strategy: Strategy,
   trades: BacktestTrade[],
   timeZone: string,
-  countBreakeven = true
+  countBreakeven = true,
+  breakevenContinuesStreak = true
 ): BacktestAnalysis {
   const sorted = [...trades].sort(
     (a, b) => new Date(a.entryTime).getTime() - new Date(b.entryTime).getTime()
@@ -437,8 +523,14 @@ export function analyzeBacktest(
   const bestDay = days.length ? days.reduce((a, b) => (b.net > a.net ? b : a)) : null;
   const worstDay = days.length ? days.reduce((a, b) => (b.net < a.net ? b : a)) : null;
 
-  const st = streaks(rows.map((r) => r.outcome));
-  const lossStreaks = losingStreakRuns(rows);
+  // Always walk every trade here, even when breakevens are excluded from the quality stats above:
+  // a breakeven trade still genuinely sits in the real sequence, so dropping it from the input
+  // (like `rows` does) would wrongly stitch the streaks on either side of it into one. `streaks()`
+  // and `losingStreakRuns()` decide for themselves, via `breakevenContinuesStreak`, whether a
+  // breakeven ends a streak or is skipped over, but either way they need every trade to do it.
+  const st = streaks(allRows.map((r) => r.outcome), breakevenContinuesStreak);
+  const lossStreaks = losingStreakRuns(allRows, breakevenContinuesStreak);
+  const dayLossStreaks = sameDayLossStreaks(allRows, breakevenContinuesStreak);
 
   const breakevenWinRate = rules.rr != null && rules.rr > 0 ? (1 / (1 + rules.rr)) * 100 : null;
 
@@ -488,6 +580,7 @@ export function analyzeBacktest(
     bestDay,
     worstDay,
     lossStreaks,
+    sameDayLossStreaks: dayLossStreaks,
     breakevenWinRate,
     firstTrade: allRows[0]?.t.entryTime ?? null,
     lastTrade: allRows[allRows.length - 1]?.t.entryTime ?? null,
@@ -793,24 +886,28 @@ export function groupTradesByMonthWeek(
 }
 
 /**
- * A view-only "what if": the same backtested points re-priced with another symbol and/or a different
- * number of contracts. Nothing is saved. `null` means "leave as logged".
+ * A view-only "what if": the same backtested points re-priced with another symbol, a different
+ * number of contracts, and/or a different fee per contract. Nothing is saved. `null` means "leave
+ * as logged".
  */
 export type Scenario = {
   symbol: string | null;
   pointValue: number | null;
   contracts: number | null;
+  feePerContract: number | null;
 };
 
-export const NO_SCENARIO: Scenario = { symbol: null, pointValue: null, contracts: null };
+export const NO_SCENARIO: Scenario = { symbol: null, pointValue: null, contracts: null, feePerContract: null };
 
 export function isScenarioActive(sc: Scenario): boolean {
-  return sc.symbol != null || sc.pointValue != null || sc.contracts != null;
+  return sc.symbol != null || sc.pointValue != null || sc.contracts != null || sc.feePerContract != null;
 }
 
 /**
- * Points stay exactly as logged; only the dollar value per point (symbol) and the size change.
- * Fees scale with size using each trade's own per-contract fee, so custom and breakeven fees carry over.
+ * Points stay exactly as logged; only the dollar value per point (symbol), the size, and the fee
+ * rate change. With no fee override, fees scale with size using each trade's own per-contract fee,
+ * so a custom or breakeven trade's original fee carries over. With a fee override, every trade pays
+ * that flat rate times its (possibly also overridden) size instead.
  */
 export function applyScenario(
   strategy: Strategy,
@@ -821,14 +918,17 @@ export function applyScenario(
     ...strategy,
     symbol: sc.symbol ?? strategy.symbol,
     pointValue: sc.pointValue ?? strategy.pointValue,
+    feePerContract: sc.feePerContract ?? strategy.feePerContract,
   };
-  const n = sc.contracts;
-  if (n == null || n < 1) return { strategy: viewStrategy, trades };
-  const viewTrades = trades.map((t) => ({
-    ...t,
-    contracts: n,
-    fees: t.contracts > 0 ? (t.fees * n) / t.contracts : t.fees,
-  }));
+  const sizeOverride = sc.contracts != null && sc.contracts >= 1 ? sc.contracts : null;
+  const feeOverride = sc.feePerContract != null && sc.feePerContract >= 0 ? sc.feePerContract : null;
+  if (sizeOverride == null && feeOverride == null) return { strategy: viewStrategy, trades };
+
+  const viewTrades = trades.map((t) => {
+    const contracts = sizeOverride ?? t.contracts;
+    const fees = feeOverride != null ? feeOverride * contracts : scaleFeeForContracts(t.fees, t.contracts, contracts);
+    return { ...t, contracts, fees };
+  });
   return { strategy: viewStrategy, trades: viewTrades };
 }
 
@@ -842,17 +942,22 @@ export type SizeComparisonRow = {
   riskPerTrade: number | null;
 };
 
-/** The same backtest priced at several contract sizes, for a side-by-side view of dollar risk and result. */
+/**
+ * The same backtest priced at several contract sizes, for a side-by-side view of dollar risk and
+ * result. `feePerContract` carries through whatever fee override is already active in the main
+ * what-if fields (null means "use each trade's own logged fee, scaled by size" as usual).
+ */
 export function compareSizes(
   strategy: Strategy,
   trades: BacktestTrade[],
   sizes: number[],
   timeZone: string,
-  countBreakeven: boolean
+  countBreakeven: boolean,
+  feePerContract: number | null = null
 ): SizeComparisonRow[] {
   const sl = strategyRules(strategy).sl;
   return sizes.map((contracts) => {
-    const view = applyScenario(strategy, trades, { symbol: null, pointValue: null, contracts });
+    const view = applyScenario(strategy, trades, { symbol: null, pointValue: null, contracts, feePerContract });
     const a = analyzeBacktest(view.strategy, view.trades, timeZone, countBreakeven);
     return {
       contracts,

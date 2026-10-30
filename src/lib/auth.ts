@@ -2,7 +2,7 @@ import crypto from "crypto";
 
 /**
  * One-way scrypt hash of the app's hardcoded unlock password. The plaintext password is never
- * stored anywhere in this codebase — this constant can only be *compared against* by re-hashing
+ * stored anywhere in this codebase. This constant can only be *compared against* by re-hashing
  * a candidate with the same salt, never reversed back into the original password.
  */
 const PASSWORD_SALT = "gringotts-vault-9f3c1a7e";

@@ -49,10 +49,9 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
     tradesByAccount.set(t.accountId, arr);
   }
 
-  const metricsTrades = settings.countBreakeven ? trades : trades.filter((t) => !t.isBreakeven);
-  const stats = computeTradeStats(metricsTrades, timeZone);
+  const stats = computeTradeStats(trades, timeZone, settings.countBreakeven, settings.breakevenContinuesStreak);
   const trueStats = computeTradeStats(trades, timeZone);
-  const dayStreaks = computeDayStreaks(metricsTrades, timeZone);
+  const dayStreaks = computeDayStreaks(trades, timeZone, settings.breakevenContinuesStreak);
   const equitySeries = computeCombinedEquitySeries(selectedAccounts, trades);
   const equityValues = equitySeries.map((p) => p.balance);
   const combinedBalance = equityValues[equityValues.length - 1];

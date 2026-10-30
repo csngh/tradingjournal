@@ -60,8 +60,7 @@ export function tradesToCsv(trades: Trade[], accounts: Account[], tags: Tag[], t
   return [HEADERS, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
 }
 
-export function downloadCsv(filename: string, csv: string) {
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+function downloadBlob(filename: string, blob: Blob) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -70,4 +69,12 @@ export function downloadCsv(filename: string, csv: string) {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+export function downloadCsv(filename: string, csv: string) {
+  downloadBlob(filename, new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+}
+
+export function downloadJson(filename: string, data: unknown) {
+  downloadBlob(filename, new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
 }

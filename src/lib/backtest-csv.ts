@@ -8,17 +8,17 @@ function csvCell(value: string | number): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-const EXPORT_HEADERS = ["Date", "Time", "Side", "Contracts", "Points", "Exit", "BE Outcome", "Fees", "Gross P&L", "Net P&L", "Notes"];
+const EXPORT_HEADERS = ["Date", "Time", "Side", "Contracts", "Points", "Exit", "BE Outcome", "ATR", "Fees", "Gross P&L", "Net P&L", "Notes"];
 
 export const BACKTEST_CSV_TEMPLATE =
   "Date,Time,Side,Contracts,Points,Exit,Fees,Notes\n2026-01-05,09:35,LONG,1,20,TP,4.50,Opening range break\n2026-01-05,10:10,SHORT,1,-10,SL,4.50,";
 
 /**
- * When `whatIf` is given, every trade is exported entirely as it's re-priced under that view
- * (another symbol and/or contract size — see `applyScenario`): Contracts, Fees, Gross P&L and Net
- * P&L all use the what-if numbers, not the numbers as actually logged. The file otherwise looks
- * exactly like a normal export — same columns, no extra "what-if" columns — so it can be reimported
- * like any other CSV. Points stay as logged either way; only the dollar value per point and the size
+ * When `whatIf` is given, every trade is exported as it's re-priced under that view (another
+ * symbol and/or contract size, see `applyScenario`): Contracts, Fees, Gross P&L and Net P&L all
+ * use the what-if numbers, not the numbers as actually logged. The file otherwise looks exactly
+ * like a normal export, same columns, no extra "what-if" columns, so it can be reimported like
+ * any other CSV. Points stay as logged either way; only the dollar value per point and the size
  * change. Rows are matched by trade id so the export stays aligned even if either array's order differs.
  */
 export function backtestTradesToCsv(
@@ -42,6 +42,7 @@ export function backtestTradesToCsv(
         t.points,
         t.exitReason,
         t.exitReason === "BE" ? (t.beOutcome ?? "") : "",
+        t.atr ?? "",
         priced.fees.toFixed(2),
         backtestGross(priced, priceStrategy).toFixed(2),
         backtestNet(priced, priceStrategy).toFixed(2),
@@ -103,6 +104,7 @@ const ALIASES = {
   beOutcome: ["beoutcome", "beresult", "beultimately", "ultimateoutcome"],
   contracts: ["contracts", "qty", "size", "quantity"],
   fees: ["fees", "fee", "commission", "commissions"],
+  atr: ["atr", "averagetruerange"],
   notes: ["notes", "note", "comment", "comments"],
 } as const;
 
@@ -170,6 +172,7 @@ export function parseBacktestCsv(
     beOutcome: find(ALIASES.beOutcome),
     contracts: find(ALIASES.contracts),
     fees: find(ALIASES.fees),
+    atr: find(ALIASES.atr),
     notes: find(ALIASES.notes),
   };
 
@@ -246,6 +249,13 @@ export function parseBacktestCsv(
       else problems.push(`invalid fees "${cell(r, col.fees)}"`);
     }
 
+    let atr: number | null = null;
+    if (col.atr >= 0 && cell(r, col.atr) !== "") {
+      const n = Number(cell(r, col.atr).replace(/,/g, ""));
+      if (Number.isFinite(n) && n > 0) atr = n;
+      else problems.push(`invalid ATR "${cell(r, col.atr)}"`);
+    }
+
     if (problems.length) {
       errors.push(`Row ${line}: ${problems.join(", ")}.`);
       return;
@@ -260,6 +270,7 @@ export function parseBacktestCsv(
       fees,
       exitReason: exitReason!,
       beOutcome: exitReason === "BE" ? parseBeOutcome(cell(r, col.beOutcome)) : null,
+      atr,
       notes: cell(r, col.notes) || null,
     });
   });

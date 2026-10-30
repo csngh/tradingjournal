@@ -1,0 +1,1 @@
+ALTER TABLE `backtest_trades` ADD `atr` real;

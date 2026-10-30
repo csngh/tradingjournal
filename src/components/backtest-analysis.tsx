@@ -8,6 +8,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  ReferenceDot,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -18,6 +19,7 @@ import { AlertTriangle, CheckCircle2, Info, XCircle } from "lucide-react";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/metrics";
+import { formatZonedDate } from "@/lib/timezone";
 import { buildInsights, formatStreakDate, strategyRules, type BacktestAnalysis, type Bucket, type Insight } from "@/lib/backtest";
 import type { Strategy } from "@/db/schema";
 
@@ -190,9 +192,20 @@ function CheckRow({
 export function BacktestAnalysisView({
   strategy,
   analysis: a,
+  timeZone,
+  afterEquity,
+  extraKpiCards,
 }: {
   strategy: Strategy;
   analysis: BacktestAnalysis;
+  timeZone: string;
+  /** Extra panels (e.g. Multi-Account Sim's payout cycle breakdown) slotted in right after the
+   * equity/drawdown charts and before Losing streaks, keeping a consistent reading order instead
+   * of the caller bolting them on before or after this whole view. */
+  afterEquity?: ReactNode;
+  /** Extra KpiCard tiles (e.g. Multi-Account Sim's avg payout days) dropped into the same top
+   * stat grid as Net P&L, Win rate, etc., so they sit among same-sized cards instead of alone. */
+  extraKpiCards?: ReactNode;
 }) {
   const insights = buildInsights(a, strategy);
   const rules = strategyRules(strategy);
@@ -208,6 +221,31 @@ export function BacktestAnalysisView({
   const pct = (n: number) => (a.totalTrades ? `${((n / a.totalTrades) * 100).toFixed(1)}%` : "0%");
 
   const capExcess = a.days.filter((d) => d.overCap);
+
+  // Only set when this analysis came through Multi-Account Sim's payout rule; a plain backtest
+  // never has this field, so none of this applies there.
+  const payoutPoints = a.equity.filter((pt) => pt.payout != null && pt.payout > 0);
+  // Calendar days from the previous payout (or the first trade, for the very first one) up to each
+  // payout, i.e. how long the account took to rebuild its peak and trigger again.
+  const payoutGapDays = payoutPoints.map((pt, i) => {
+    const prevDate = i === 0 ? a.firstTrade : payoutPoints[i - 1].date;
+    if (!prevDate) return null;
+    return Math.round((new Date(pt.date).getTime() - new Date(prevDate).getTime()) / 86_400_000);
+  });
+  // The gold marker itself sits one trade later, at the actual post-withdrawal dip, while the "Xd"
+  // label stays anchored to the peak trade that triggered it (falls back to the peak's own point
+  // when the payout happened on the very last trade, so there's no "next" point to show a dip at).
+  const payoutDipPoints = payoutPoints.map((pt) => a.equity[pt.index + 1] ?? pt);
+
+  // Shared by the equity-curve and drawdown tooltips: both plot `a.equity`, keyed by trade index,
+  // so the hovered point's real calendar date comes from the matching payload entry, not the axis label.
+  const equityLabel = (l: ReactNode, payload?: readonly { payload?: { date?: string; payout?: number } }[]) => {
+    if (Number(l) === 0) return "Start";
+    const point = payload?.[0]?.payload;
+    const dateStr = point?.date && point.date !== "start" ? formatZonedDate(point.date, timeZone) : null;
+    const payoutStr = point?.payout ? ` · Payout ${formatCurrency(point.payout)}` : "";
+    return `After trade ${l}${dateStr ? ` · ${dateStr}` : ""}${payoutStr}`;
+  };
 
   return (
     <div className="flex flex-col gap-5">
@@ -295,11 +333,16 @@ export function BacktestAnalysisView({
           tone={a.worstDay ? toneOf(a.worstDay.net) : "neutral"}
           sub={a.worstDay ? `${a.worstDay.date} · ${a.worstDay.trades} trades` : undefined}
         />
+        {extraKpiCards}
       </div>
 
       <Panel
         title="Equity curve"
-        subtitle={`Cumulative net P&L after fees${strategy.startingCapital > 0 ? `, starting from ${formatCurrency(strategy.startingCapital)}` : ""}`}
+        subtitle={
+          payoutPoints.length > 0
+            ? `Account balance after fees and payouts. Gold dots mark each of the ${payoutPoints.length} withdrawal${payoutPoints.length === 1 ? "" : "s"}, labeled above the peak that triggered it with calendar days since the previous one.`
+            : `Cumulative net P&L after fees${strategy.startingCapital > 0 ? `, starting from ${formatCurrency(strategy.startingCapital)}` : ""}`
+        }
       >
         <ResponsiveContainer width="100%" height={280}>
           <AreaChart data={a.equity} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -315,10 +358,39 @@ export function BacktestAnalysisView({
             <ReferenceLine y={strategy.startingCapital} stroke="var(--border)" strokeDasharray="4 4" />
             <Tooltip
               contentStyle={TOOLTIP_STYLE}
-              labelFormatter={(l) => (Number(l) === 0 ? "Start" : `After trade ${l}`)}
+              labelFormatter={equityLabel}
               formatter={(v) => [formatCurrency(Number(v)), "Equity"]}
             />
             <Area type="monotone" dataKey="equity" stroke={eqColor} strokeWidth={2} fill="url(#btEquityFill)" />
+            {payoutPoints.map((pt, i) => (
+              // Invisible anchor at the peak: carries only the "Xd" label, no visible marker of its own.
+              <ReferenceDot
+                key={`label-${pt.index}`}
+                x={pt.index}
+                y={pt.equity}
+                r={0}
+                fill="transparent"
+                stroke="none"
+                ifOverflow="extendDomain"
+                label={
+                  payoutGapDays[i] != null
+                    ? { value: `${payoutGapDays[i]}d`, position: "top", fill: "var(--accent)", fontSize: 10, fontWeight: 600 }
+                    : undefined
+                }
+              />
+            ))}
+            {payoutDipPoints.map((pt) => (
+              <ReferenceDot
+                key={`dot-${pt.index}`}
+                x={pt.index}
+                y={pt.equity}
+                r={5}
+                fill="var(--accent)"
+                stroke="var(--bg)"
+                strokeWidth={1.5}
+                ifOverflow="extendDomain"
+              />
+            ))}
           </AreaChart>
         </ResponsiveContainer>
       </Panel>
@@ -337,13 +409,15 @@ export function BacktestAnalysisView({
             <YAxis tick={AXIS} tickLine={false} axisLine={false} width={56} tickFormatter={compactMoney} />
             <Tooltip
               contentStyle={TOOLTIP_STYLE}
-              labelFormatter={(l) => (Number(l) === 0 ? "Start" : `After trade ${l}`)}
+              labelFormatter={equityLabel}
               formatter={(v) => [formatCurrency(Number(v)), "Drawdown"]}
             />
             <Area type="monotone" dataKey="drawdown" stroke="var(--loss)" strokeWidth={1.5} fill="url(#btDdFill)" />
           </AreaChart>
         </ResponsiveContainer>
       </Panel>
+
+      {afterEquity}
 
       {a.lossStreaks.length > 0 && (
         <Panel
@@ -401,6 +475,34 @@ export function BacktestAnalysisView({
               </table>
             </div>
           )}
+        </Panel>
+      )}
+
+      {a.sameDayLossStreaks.length > 0 && (
+        <Panel
+          title="Days with back-to-back losses"
+          subtitle="Longest first · a run only counts within a single day, never across days"
+        >
+          <div className="max-h-72 overflow-y-auto">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-[var(--surface)]">
+                <tr className="text-left text-xs font-medium text-[var(--text-muted)]">
+                  <th className="pb-2 font-medium">Date</th>
+                  <th className="pb-2 font-medium">Losses that day</th>
+                  <th className="pb-2 text-right font-medium">Net P&amp;L</th>
+                </tr>
+              </thead>
+              <tbody>
+                {a.sameDayLossStreaks.map((d) => (
+                  <tr key={d.day} className="border-t border-[var(--border)]">
+                    <td className="py-2 text-[var(--text)]">{formatStreakDate(d.day)}</td>
+                    <td className="py-2 font-semibold text-[var(--loss)]">{d.count}</td>
+                    <td className="py-2 text-right tabular font-semibold text-[var(--loss)]">{signedMoney(d.net)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Panel>
       )}
 
@@ -577,41 +679,6 @@ export function BacktestAnalysisView({
         </Panel>
       </div>
 
-      <Panel title="Daily results" subtitle="Every trading day, newest first">
-        <div className="max-h-96 overflow-y-auto">
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-[var(--surface)]">
-              <tr className="text-left text-xs font-medium text-[var(--text-muted)]">
-                <th className="pb-2 font-medium">Date</th>
-                <th className="pb-2 text-right font-medium">Trades</th>
-                <th className="pb-2 text-right font-medium">Net P&amp;L</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...a.days].reverse().map((d) => (
-                <tr key={d.date} className="border-t border-[var(--border)]">
-                  <td className="py-2 text-[var(--text)]">
-                    {d.date}
-                    {d.overCap && (
-                      <span className="ml-2">
-                        <Badge tone="warning">over limit</Badge>
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-2 text-right tabular text-[var(--text-muted)]">{d.trades}</td>
-                  <td
-                    className={`py-2 text-right tabular font-semibold ${
-                      d.net > 0 ? "text-[var(--profit)]" : d.net < 0 ? "text-[var(--loss)]" : "text-[var(--text-muted)]"
-                    }`}
-                  >
-                    {signedMoney(d.net)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Panel>
     </div>
   );
 }

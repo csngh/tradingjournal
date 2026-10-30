@@ -13,7 +13,13 @@ export default async function StrategyPage({ params }: PageProps<"/backtest/[id]
   if (!strategy) notFound();
 
   const [trades, settings] = await Promise.all([getBacktestTrades(id), getAppSettings()]);
-  const analysis = analyzeBacktest(strategy, trades, settings.timezone, settings.countBreakeven);
+  const analysis = analyzeBacktest(
+    strategy,
+    trades,
+    settings.timezone,
+    settings.countBreakeven,
+    settings.breakevenContinuesStreak
+  );
 
   return (
     <BacktestDetailClient
@@ -22,6 +28,7 @@ export default async function StrategyPage({ params }: PageProps<"/backtest/[id]
       analysis={analysis}
       timeZone={settings.timezone}
       countBreakeven={settings.countBreakeven}
+      breakevenContinuesStreak={settings.breakevenContinuesStreak}
     />
   );
 }

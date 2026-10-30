@@ -15,7 +15,7 @@ function clearClientStorage() {
   try {
     localStorage.clear();
   } catch {
-    // Private browsing / blocked storage — nothing more we can do client-side.
+    // Private browsing or blocked storage, nothing more we can do client-side.
   }
   try {
     sessionStorage.clear();

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { FlaskConical } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { inputClass, labelClass, primaryButtonClass, secondaryButtonClass, dangerButtonClass } from "@/components/ui/form";
-import { createStrategy, updateStrategy, deleteStrategy, type StrategyInput } from "@/app/actions";
+import { bulkResizeBacktestTrades, createStrategy, updateStrategy, deleteStrategy, type StrategyInput } from "@/app/actions";
 import { FUTURES_SYMBOLS, findFuturesSymbol } from "@/lib/futures-symbols";
 import { TIMEFRAMES } from "@/lib/timeframes";
 import { formatCurrency } from "@/lib/metrics";
@@ -45,6 +45,15 @@ export function StrategyForm({
   const [submitting, setSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Set after an edit changes size or fee per contract while trades already exist, to offer an
+  // explicit repricing of everything already logged. Replaces the form with a yes/no prompt.
+  const [pendingResize, setPendingResize] = useState<{
+    contractsFrom: number;
+    contractsTo: number;
+    feeFrom: number;
+    feeTo: number;
+  } | null>(null);
+  const [resizing, setResizing] = useState(false);
 
   const knownSymbol = findFuturesSymbol(symbol);
 
@@ -88,7 +97,18 @@ export function StrategyForm({
     try {
       if (strategy) {
         await updateStrategy(strategy.id, input);
-        onClose();
+        const sizeChanged = input.contracts !== strategy.contracts;
+        const feeChanged = input.feePerContract !== strategy.feePerContract;
+        if ((sizeChanged || feeChanged) && tradeCount > 0) {
+          setPendingResize({
+            contractsFrom: strategy.contracts,
+            contractsTo: input.contracts,
+            feeFrom: strategy.feePerContract,
+            feeTo: input.feePerContract,
+          });
+        } else {
+          onClose();
+        }
       } else {
         const id = await createStrategy(input);
         onClose();
@@ -98,6 +118,22 @@ export function StrategyForm({
       setError(err instanceof Error ? err.message : "Couldn't save this strategy.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleResizeDecision(apply: boolean) {
+    if (!strategy || !pendingResize) return;
+    if (!apply) {
+      onClose();
+      return;
+    }
+    setResizing(true);
+    try {
+      await bulkResizeBacktestTrades(strategy.id, pendingResize.contractsTo, pendingResize.feeTo);
+      router.refresh();
+      onClose();
+    } finally {
+      setResizing(false);
     }
   }
 
@@ -117,10 +153,53 @@ export function StrategyForm({
     <Modal
       open={open}
       onClose={onClose}
-      title={strategy ? "Edit strategy" : "New strategy"}
+      title={pendingResize ? "Update logged trades?" : strategy ? "Edit strategy" : "New strategy"}
       icon={FlaskConical}
       width="max-w-xl"
     >
+      {pendingResize ? (
+        <div className="flex flex-col gap-4 text-sm">
+          <p className="text-[var(--text-muted)]">
+            {pendingResize.contractsFrom !== pendingResize.contractsTo && (
+              <>
+                Trade size changed from <b className="text-[var(--text)]">{pendingResize.contractsFrom}</b> to{" "}
+                <b className="text-[var(--text)]">{pendingResize.contractsTo}</b> contract
+                {pendingResize.contractsTo === 1 ? "" : "s"}.{" "}
+              </>
+            )}
+            {pendingResize.feeFrom !== pendingResize.feeTo && (
+              <>
+                Fee per contract changed from <b className="text-[var(--text)]">{formatCurrency(pendingResize.feeFrom)}</b>{" "}
+                to <b className="text-[var(--text)]">{formatCurrency(pendingResize.feeTo)}</b>.{" "}
+              </>
+            )}
+            The strategy is already saved. This only decides what happens to the{" "}
+            <b className="text-[var(--text)]">{tradeCount}</b> trade{tradeCount === 1 ? "" : "s"} already logged.
+          </p>
+          <p className="text-[var(--text-muted)]">
+            Updating recalculates their net P&amp;L at the new size: points stay exactly as logged, and every trade&apos;s
+            fee is repriced at the strategy&apos;s current fee per contract ({formatCurrency(pendingResize.feeTo)}).
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => handleResizeDecision(false)}
+              disabled={resizing}
+              className={secondaryButtonClass}
+            >
+              No, keep as logged
+            </button>
+            <button
+              type="button"
+              onClick={() => handleResizeDecision(true)}
+              disabled={resizing}
+              className={primaryButtonClass}
+            >
+              {resizing ? "Updating…" : `Yes, update all ${tradeCount} trades`}
+            </button>
+          </div>
+        </div>
+      ) : (
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
           <label className={labelClass}>Strategy name</label>
@@ -428,6 +507,7 @@ export function StrategyForm({
           </div>
         </div>
       </form>
+      )}
     </Modal>
   );
 }

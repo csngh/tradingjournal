@@ -3,9 +3,8 @@ import { SESSION_COOKIE_NAME, SESSION_TOKEN } from "@/lib/session";
 
 /**
  * Gates every real page behind the session cookie set by the /unlock flow. This runs before any
- * page or layout renders, so protected pages' data-fetching never executes for an unauthenticated
- * request — the real trade/account data is never sent to the browser while locked, not just
- * hidden client-side.
+ * page or layout renders, so an unauthenticated request never triggers data-fetching: trade and
+ * account data never reaches the browser while locked, not just hidden client-side.
  */
 export function proxy(request: NextRequest) {
   const cookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;

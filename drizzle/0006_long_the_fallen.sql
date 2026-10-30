@@ -1,0 +1,1 @@
+ALTER TABLE `app_settings` ADD `breakeven_continues_streak` integer DEFAULT true NOT NULL;

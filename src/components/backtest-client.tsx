@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FlaskConical, PlusCircle, ChevronRight } from "lucide-react";
 import { StrategyForm } from "@/components/strategy-form";
 import { BacktestDataManager } from "@/components/backtest-data-manager";
+import { ImportStrategyButton } from "@/components/import-strategy-button";
 import { primaryButtonClass } from "@/components/ui/form";
 import { formatCurrency } from "@/lib/metrics";
 import type { Strategy } from "@/db/schema";
@@ -56,6 +57,7 @@ export function BacktestClient({ items }: { items: StrategySummary[] }) {
         </div>
         <div className="flex shrink-0 flex-wrap items-start gap-2">
           <BacktestDataManager strategyCount={items.length} />
+          <ImportStrategyButton />
           <button onClick={openNew} className={primaryButtonClass}>
             <PlusCircle size={16} />
             New strategy

@@ -111,6 +111,9 @@ function validateBacktestTrades(backtestTrades: unknown[], strategyIds: Set<stri
     if (bt.exitReason !== undefined && !EXIT_REASONS.includes(bt.exitReason as string)) {
       errors.push(`Backtest trade "${label}" has an invalid exit reason: "${bt.exitReason}".`);
     }
+    if (bt.atr != null && !isFiniteNumber(bt.atr)) {
+      errors.push(`Backtest trade "${label}" has an invalid "atr" value.`);
+    }
   });
   return { errors };
 }

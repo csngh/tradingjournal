@@ -16,7 +16,7 @@ export default async function BacktestPage() {
 
   const items: StrategySummary[] = strategies.map((strategy) => {
     const trades = allTrades.filter((t) => t.strategyId === strategy.id);
-    const a = analyzeBacktest(strategy, trades, settings.timezone, settings.countBreakeven);
+    const a = analyzeBacktest(strategy, trades, settings.timezone, settings.countBreakeven, settings.breakevenContinuesStreak);
     return {
       strategy,
       trades: a.totalTrades,
